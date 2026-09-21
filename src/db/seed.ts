@@ -21,6 +21,7 @@ const EXERCISES: ExerciseSeed[] = [
   { name: 'Tríceps na Polia', muscleGroup: 'Tríceps', equipment: 'cabo', aliases: ['Tríceps polia', 'Tríceps corda'] },
   { name: 'Bíceps na Polia', muscleGroup: 'Bíceps', equipment: 'cabo', aliases: ['Bíceps polia', 'Rosca polia'] },
   { name: 'Bíceps Barra W', muscleGroup: 'Bíceps', equipment: 'barra', aliases: ['Rosca barra W', 'Rosca W'] },
+  { name: 'Bíceps Scott Halter', muscleGroup: 'Bíceps', equipment: 'halter', aliases: ['Scott', 'Rosca Scott', 'Bíceps Scott', 'Scott halter'] },
   { name: 'Cadeira Flexora', muscleGroup: 'Posterior de Coxa', equipment: 'maquina', aliases: ['Flexora', 'Mesa flexora'] },
   { name: 'Cadeira Extensora', muscleGroup: 'Quadríceps', equipment: 'maquina', aliases: ['Extensora'] },
   { name: 'Agachamento Livre', muscleGroup: 'Quadríceps Composto', equipment: 'barra', isCompound: true, aliases: ['Agachamento'] },
@@ -45,7 +46,7 @@ const ROUTINES: { name: string; description: string; items: ItemSeed[] }[] = [
       ['Crucifixo', 2, 8, 10, 0, 1],
       ['Elevação Lateral', 2, 10, 12, 0, 1],
       ['Tríceps na Polia', 2, 10, 12, 0, 1],
-      ['Bíceps na Polia', 2, 10, 12, 0, 1, ['Bíceps Barra W']],
+      ['Bíceps Scott Halter', 2, 10, 12, 0, 1, ['Bíceps Barra W']],
       ['Cadeira Flexora', 2, 10, 12, 0, 1],
       ['Cadeira Extensora', 2, 10, 12, 0, 1],
     ],
@@ -71,7 +72,7 @@ const ROUTINES: { name: string; description: string; items: ItemSeed[] }[] = [
       ['Supino Inclinado Halteres', 2, 6, 8, 1, 2],
       ['Puxada Alta Supinada', 2, 8, 10, 0, 1],
       ['Elevação Lateral', 2, 10, 12, 0, 1],
-      ['Bíceps na Polia', 2, 10, 12, 0, 1, ['Bíceps Barra W']],
+      ['Bíceps Scott Halter', 2, 10, 12, 0, 1, ['Bíceps Barra W']],
       ['Tríceps na Polia', 2, 10, 12, 0, 1],
       ['Leg Press', 2, 6, 8, 1, 2, ['Cadeira Extensora']],
       ['Cadeira Flexora', 2, 10, 12, 0, 1],
@@ -80,7 +81,7 @@ const ROUTINES: { name: string; description: string; items: ItemSeed[] }[] = [
 ]
 
 /** Sobe quando o programa muda; `applyProgramUpdates` migra bancos antigos. */
-const PROGRAM_VERSION = 2
+const PROGRAM_VERSION = 3
 
 /**
  * Garante que os exercícios do programa existam (casando por nome ou alias com
@@ -157,6 +158,7 @@ export async function seedProgramIfMissing(): Promise<void> {
 /**
  * Migrações do programa para quem já tinha as rotinas gravadas.
  * v2: treino B troca Stiff + Cadeira Romana por Levantamento Terra.
+ * v3: Bíceps na Polia vira Bíceps Scott Halter em todos os treinos.
  */
 async function applyProgramUpdates(idByName: Map<string, string>): Promise<void> {
   const version = (await getSetting<number>('programVersion')) ?? 1
@@ -177,6 +179,19 @@ async function applyProgramUpdates(idByName: Map<string, string>): Promise<void>
         items = [...items.slice(0, at), { exerciseId: terraId, targetSets: 2, targetRepsMin: 6, targetRepsMax: 8, rirMin: 1, rirMax: 2 }, ...items.slice(at)]
       }
       await db.routines.update(b.id, { items, description: 'Full body · agachamento, terra e ombro' })
+    }
+  }
+
+  if (version < 3) {
+    const scottId = idByName.get('Bíceps Scott Halter')
+    const all = await db.exercises.toArray()
+    const poliaId = all.find((e) => normalizeName(e.name) === normalizeName('Bíceps na Polia'))?.id
+    if (scottId && poliaId) {
+      for (const r of await db.routines.toArray()) {
+        if (!r.items.some((it) => it.exerciseId === poliaId)) continue
+        const items = r.items.map((it) => (it.exerciseId === poliaId ? { ...it, exerciseId: scottId, alternativeIds: (it.alternativeIds ?? []).filter((id) => id !== scottId) } : it))
+        await db.routines.update(r.id, { items })
+      }
     }
   }
 

@@ -92,7 +92,7 @@ BodyWeight      { id, date, kg }                       (fase 4)
 
 ## O programa
 
-Três treinos full body, A, B e C, com 2 séries por exercício. Compostos (marcados com *) em 6–8 reps com RIR 1–2; isolados em 8–10 ou 10–12 com RIR 0–1. Alguns itens aceitam alternativa ("Remada Baixa no Cabo ou Remada em Máquina", "Leg Press ou Cadeira Extensora"). O treino B tem Agachamento, Levantamento Terra e Desenvolvimento como compostos. Plano da semana: Seg A, Ter corrida, Qua B, Qui corrida, Sex C. Tudo isso é carregado na primeira abertura por `src/db/seed.ts` e editável na tela Treinos. Quando o programa muda no código, `PROGRAM_VERSION` sobe e uma migração ajusta bancos existentes sem apagar histórico.
+Três treinos full body, A, B e C, com 2 séries por exercício. Compostos (marcados com *) em 6–8 reps com RIR 1–2; isolados em 8–10 ou 10–12 com RIR 0–1. Alguns itens aceitam alternativa ("Remada Baixa no Cabo ou Remada em Máquina", "Leg Press ou Cadeira Extensora"). O treino B tem Agachamento, Levantamento Terra e Desenvolvimento como compostos. Bíceps é feito no banco Scott com halter (alternativa: barra W). Plano da semana: Seg A, Ter corrida, Qua B, Qui corrida, Sex C. Tudo isso é carregado na primeira abertura por `src/db/seed.ts` e editável na tela Treinos. Quando o programa muda no código, `PROGRAM_VERSION` sobe e uma migração ajusta bancos existentes sem apagar histórico.
 
 **Próximo treino**: sempre o próximo na sequência depois do último treino registrado (A → B → C → A), porque o dia da semana varia. O plano só informa; se coincidir, o motivo aparece como "plano de hoje", e em dia de corrida o painel avisa. Exercícios pulados não mudam a sequência: aparecem como "Pulados" no detalhe da sessão e como "6 de 8 exercícios" no histórico. Se um exercício não aparece em 2 ou mais treinos seguidos da mesma rotina (nem sua alternativa), o painel mostra o aviso "Sendo pulados" com a contagem e a última vez, e a lista do próximo treino marca "pulado N×" (`src/lib/skips.ts`).
 
@@ -141,6 +141,7 @@ Seis seções: **Evolução · Anotar · Histórico · Treinos · Exercícios ·
 
 ### 3. Histórico
 - Lista por data com totais do mês (treinos e corridas). Corrida mostra distância, tempo e ritmo. Detalhe da sessão mostra cada exercício com carga, reps e decisão, e tem "Copiar como texto".
+- **Editar** um treino salvo: carga, reps de cada série (adicionar ou tirar série), decisão, remover ou adicionar exercício, reordenar e mudar o dia. Salvar regrava as séries da sessão e sobe o carimbo, então a alteração sincroniza. Corrida edita dia, km e tempo.
 
 ### 4. Treinos
 - Plano da semana: sete seletores (descanso, corrida ou um treino).
