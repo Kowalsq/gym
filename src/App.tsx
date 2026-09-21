@@ -5,6 +5,7 @@ import { Exercises } from './pages/Exercises'
 import { History } from './pages/History'
 import { Home } from './pages/Home'
 import { QuickNote } from './pages/QuickNote'
+import { Routines } from './pages/Routines'
 import { SessionDetail } from './pages/SessionDetail'
 import { Settings } from './pages/Settings'
 import { Workout } from './pages/Workout'
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="anotar" element={<QuickNote />} />
         <Route path="historico" element={<History />} />
         <Route path="historico/:id" element={<SessionDetail />} />
+        <Route path="treinos" element={<Routines />} />
         <Route path="exercicios" element={<Exercises />} />
         <Route path="exercicios/:id" element={<ExerciseDetail />} />
         <Route path="ajustes" element={<Settings />} />

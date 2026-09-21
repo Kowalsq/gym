@@ -4,10 +4,12 @@
  *   Desenvolvimento máquina 75 10 7 manter
  *   Crucifixo invertido 30kg 10 8 manter
  *   Crucifixo 2x8 55kg manter
+ *   Corrida 5km 28:30
  *
  * Regras: o nome vem primeiro; o peso é o número com "kg" ou, sem "kg", o
  * primeiro número; "NxR" vira N séries de R reps; os demais números são reps
  * de cada série; a última palavra pode ser a decisão para o próximo treino.
+ * Linha começando com "Corrida" é corrida: distância em km e tempo.
  *
  * Linhas de data ("21/09", "21/09/2026", "Segunda 21/09") abrem um novo dia.
  * Prefixos de exportação do WhatsApp ("21/09/2026 18:32 - Felipe: ") são
@@ -18,10 +20,14 @@ export type Decision = 'manter' | 'aumentar' | 'diminuir'
 
 export interface ParsedLine {
   raw: string
+  kind: 'lift' | 'run'
   name: string
   weightKg: number | null
   reps: number[]
   decision: Decision | null
+  /** Corrida. */
+  distanceKm?: number
+  durationSec?: number
   warnings: string[]
 }
 
@@ -46,10 +52,16 @@ const DECISIONS: Record<string, Decision> = {
   reduzir: 'diminuir',
 }
 
+const RUN_WORDS = new Set(['corrida', 'correr', 'corri', 'run', 'caminhada', 'esteira'])
+
 const WA_PREFIX = /^\[?(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s+\d{1,2}:\d{2}(?::\d{2})?\]?\s*-?\s*[^:]+:\s*/
 const DATE_LINE = /^(?:[a-zçà-ü-]+\s+)?(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\s*$/i
 const NUM = /^(\d+(?:[.,]\d+)?)(kg)?$/i
 const SETS = /^(\d+)\s*x\s*(\d+)$/i
+const DIST = /^(\d+(?:[.,]\d+)?)\s*(km|k|m)$/i
+const TIME_MIN = /^(\d+(?:[.,]\d+)?)\s*(min|m|minutos)$/i
+const TIME_CLOCK = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+const TIME_H = /^(\d{1,2})h(\d{2})?$/i
 
 const toNumber = (s: string) => Number(s.replace(',', '.'))
 
@@ -62,11 +74,70 @@ function localDate(day: number, month: number, year?: number): number {
   return d.getTime()
 }
 
+function parseRun(raw: string, tokens: string[]): ParsedLine {
+  const warnings: string[] = []
+  let distanceKm: number | undefined
+  let durationSec: number | undefined
+  const rest = tokens.slice(1)
+  for (let i = 0; i < rest.length; i++) {
+    const t = rest[i]
+    const next = rest[i + 1]?.toLowerCase()
+    let m: RegExpExecArray | null
+    if ((m = DIST.exec(t))) {
+      const v = toNumber(m[1])
+      distanceKm = m[2].toLowerCase() === 'm' ? v / 1000 : v
+      continue
+    }
+    if ((m = TIME_CLOCK.exec(t))) {
+      const a = Number(m[1])
+      const b = Number(m[2])
+      const c = m[3] !== undefined ? Number(m[3]) : null
+      durationSec = c === null ? a * 60 + b : a * 3600 + b * 60 + c
+      continue
+    }
+    if ((m = TIME_H.exec(t))) {
+      durationSec = Number(m[1]) * 3600 + Number(m[2] ?? 0) * 60
+      continue
+    }
+    if ((m = TIME_MIN.exec(t))) {
+      durationSec = Math.round(toNumber(m[1]) * 60)
+      continue
+    }
+    if (NUM.test(t) && !/kg$/i.test(t)) {
+      // Número solto: "5 km" ou "28 min" separados por espaço.
+      if (next === 'km' || next === 'k') {
+        distanceKm = toNumber(t)
+        i++
+        continue
+      }
+      if (next === 'min' || next === 'minutos') {
+        durationSec = Math.round(toNumber(t) * 60)
+        i++
+        continue
+      }
+      if (distanceKm === undefined) {
+        distanceKm = toNumber(t)
+        continue
+      }
+      if (durationSec === undefined) {
+        durationSec = Math.round(toNumber(t) * 60)
+        continue
+      }
+    }
+    warnings.push(`Não entendi "${t}".`)
+  }
+  if (distanceKm === undefined) warnings.push('Sem distância.')
+  if (durationSec === undefined) warnings.push('Sem tempo.')
+  return { raw, kind: 'run', name: 'Corrida', weightKg: null, reps: [], decision: null, distanceKm, durationSec, warnings }
+}
+
 export function parseLine(input: string): ParsedLine | null {
   const raw = input.trim()
   if (!raw) return null
   const tokens = raw.split(/\s+/)
   const warnings: string[] = []
+
+  if (RUN_WORDS.has(tokens[0].toLowerCase().replace(/[:\-–]+$/, ''))) return parseRun(raw, tokens)
 
   let decision: Decision | null = null
   const lastKey = tokens[tokens.length - 1].toLowerCase().replace(/[.!]+$/, '')
@@ -84,7 +155,7 @@ export function parseLine(input: string): ParsedLine | null {
     nameTokens.push(t)
   }
   const name = nameTokens.join(' ').replace(/[:\-–]+$/, '').trim()
-  if (!name) return { raw, name: '', weightKg: null, reps: [], decision, warnings: ['Linha sem nome de exercício.'] }
+  if (!name) return { raw, kind: 'lift', name: '', weightKg: null, reps: [], decision, warnings: ['Linha sem nome de exercício.'] }
 
   let weightKg: number | null = null
   const reps: number[] = []
@@ -127,7 +198,7 @@ export function parseLine(input: string): ParsedLine | null {
   if (weightKg === null) warnings.push('Sem peso.')
   if (reps.length === 0) warnings.push('Sem repetições.')
 
-  return { raw, name, weightKg, reps, decision, warnings }
+  return { raw, kind: 'lift', name, weightKg, reps, decision, warnings }
 }
 
 /** Divide o texto em dias. Linhas sem data caem no dia informado em `defaultDate`. */
@@ -183,9 +254,16 @@ export function normalizeName(s: string): string {
 }
 
 /** Formata uma linha no mesmo padrão do WhatsApp, para exportar ou copiar. */
-export function formatLine(name: string, weightKg: number, reps: number[], decision: Decision | null): string {
-  const w = String(weightKg).replace('.', ',')
+export function formatLine(name: string, weightKg: number | null, reps: number[], decision: Decision | null): string {
+  const w = weightKg === null ? '' : String(weightKg).replace('.', ',')
   const allSame = reps.length > 1 && reps.every((r) => r === reps[0])
-  const repsPart = allSame ? `${reps.length}x${reps[0]}` : reps.join(' ')
+  const repsPart = reps.length === 0 ? '' : allSame ? `${reps.length}x${reps[0]}` : reps.join(' ')
   return [name, w, repsPart, decision ?? ''].filter(Boolean).join(' ')
+}
+
+/** "Corrida 5,2km 28:30". */
+export function formatRunLine(distanceKm: number, durationSec: number): string {
+  const m = Math.floor(durationSec / 60)
+  const s = durationSec % 60
+  return `Corrida ${String(distanceKm).replace('.', ',')}km ${m}:${String(s).padStart(2, '0')}`
 }

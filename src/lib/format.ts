@@ -3,6 +3,7 @@ const intFormatter = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }
 
 export const fmtKg = (kg: number): string => kgFormatter.format(kg)
 export const fmtInt = (n: number): string => intFormatter.format(n)
+export const fmtKm = (km: number): string => kgFormatter.format(km)
 
 /** "58 min" ou "1 h 04" para durações em ms. */
 export function fmtDuration(ms: number): string {
@@ -24,6 +25,15 @@ export function fmtClock(ms: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`
 }
 
+/** "5:36 /km" a partir de segundos e km. */
+export function fmtPace(durationSec: number, km: number): string {
+  if (!km || !durationSec) return '—'
+  const secPerKm = durationSec / km
+  const m = Math.floor(secPerKm / 60)
+  const s = Math.round(secPerKm % 60)
+  return `${m}:${String(s).padStart(2, '0')} /km`
+}
+
 const dayMonth = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short' })
 const weekdayLong = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' })
 
@@ -33,7 +43,8 @@ export const fmtWeekday = (ts: number): string => {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-export const MUSCLE_LABEL: Record<string, string> = {
+/** Rótulos para grupos antigos em chave; grupos do programa já vêm legíveis. */
+const LEGACY_MUSCLE: Record<string, string> = {
   peito: 'Peito',
   costas: 'Costas',
   ombro: 'Ombro',
@@ -45,6 +56,8 @@ export const MUSCLE_LABEL: Record<string, string> = {
   cardio: 'Cardio',
   outro: 'Outro',
 }
+
+export const muscleLabel = (g: string): string => LEGACY_MUSCLE[g] ?? g
 
 export const EQUIPMENT_LABEL: Record<string, string> = {
   barra: 'Barra',

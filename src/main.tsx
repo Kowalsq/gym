@@ -4,15 +4,15 @@ import { BrowserRouter } from 'react-router'
 import App from './App'
 import { saveParsedDays } from './db/notes'
 import { db } from './db/schema'
-import { seedIfEmpty } from './db/seed'
+import { seedProgramIfMissing } from './db/seed'
 import './index.css'
 import { parseNotes } from './lib/parse'
 import { applyTheme, readTheme } from './lib/theme'
 
 applyTheme(readTheme())
 
-// Biblioteca inicial de exercícios; não bloqueia a primeira renderização.
-void seedIfEmpty()
+// Exercícios, rotinas A/B/C e plano semanal; não bloqueia a primeira renderização.
+void seedProgramIfMissing()
 
 if (import.meta.env.DEV) {
   // Atalhos para testes manuais no console e capturas automatizadas.

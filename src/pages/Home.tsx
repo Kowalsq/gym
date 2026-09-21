@@ -5,11 +5,13 @@ import { Decision } from '../components/Decision'
 import { Heatmap } from '../components/Heatmap'
 import { LineChart, type ChartSeries } from '../components/LineChart'
 import { IconPlus } from '../components/Icons'
-import { db } from '../db/schema'
-import { RANGES, analyze, rangeStartFor, suggestNext, type RangeKey } from '../lib/analysis'
-import { fmtDayMonth, fmtKg } from '../lib/format'
+import { db, getSetting, type WeekPlan } from '../db/schema'
+import { RANGES, analyze, dayKey, rangeStartFor, suggestNext, type RangeKey } from '../lib/analysis'
+import { fmtDayMonth, fmtKg, fmtKm } from '../lib/format'
+import { WEEKDAY_SHORT, slotLabel, suggestRoutine, weekStart } from '../lib/plan'
 
 const COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)']
+const DAY = 24 * 60 * 60 * 1000
 
 function readRange(): RangeKey {
   try {
@@ -26,9 +28,12 @@ export function Home() {
   const sessions = useLiveQuery(() => db.sessions.toArray(), [])
   const sets = useLiveQuery(() => db.sets.toArray(), [])
   const logs = useLiveQuery(() => db.logs.toArray(), [])
+  const routines = useLiveQuery(() => db.routines.orderBy('order').toArray(), [])
+  const plan = useLiveQuery(() => getSetting<WeekPlan>('weekPlan'), [])
 
   const [range, setRange] = useState<RangeKey>(readRange)
   const [selected, setSelected] = useState<string[] | null>(null)
+  const [now] = useState(() => Date.now())
 
   const rangeStart = rangeStartFor(range)
   const analysis = useMemo(
@@ -43,7 +48,6 @@ export function Home() {
       .sort((a, b) => b.current!.date - a.current!.date || b.sessionsCount - a.sessionsCount)
   }, [analysis])
 
-  // Seleção padrão: os 3 exercícios com mais sessões no período.
   const defaultSelected = useMemo(
     () =>
       [...summaries]
@@ -60,14 +64,31 @@ export function Home() {
       id,
       name: s?.exercise.name ?? '',
       color: COLORS[i],
-      points: (s?.points ?? [])
-        .filter((p) => p.date >= rangeStart)
-        .map((p) => ({ x: p.date, y: p.maxWeightKg, detail: `${p.reps.join(' · ')} reps` })),
+      points: (s?.points ?? []).filter((p) => p.date >= rangeStart).map((p) => ({ x: p.date, y: p.maxWeightKg, detail: `${p.reps.join(' · ')} reps` })),
     }
   })
 
-  const toIncrease = summaries.filter((s) => s.current?.decision === 'aumentar')
-  const toDecrease = summaries.filter((s) => s.current?.decision === 'diminuir')
+  const suggestion = useMemo(() => (routines && sessions ? suggestRoutine(plan, routines, sessions, now) : null), [plan, routines, sessions, now])
+  const toIncrease = summaries.filter((s) => s.current?.decision === 'aumentar').length
+
+  // Semana corrente: plano, feito, hoje.
+  const ws = weekStart(now)
+  const todayKey = dayKey(now)
+  const week = Array.from({ length: 7 }, (_, d) => {
+    const dayTs = ws + d * DAY
+    const done = (sessions ?? []).filter((s) => s.endedAt !== undefined && dayKey(s.startedAt) === dayTs)
+    const slot = plan?.[d]
+    return {
+      d,
+      dayTs,
+      slot,
+      planned: slot ? slotLabel(slot, routines ?? []) : '',
+      doneGym: done.find((s) => s.kind !== 'run'),
+      doneRun: done.find((s) => s.kind === 'run'),
+      isToday: dayTs === todayKey,
+      past: dayTs < todayKey,
+    }
+  })
 
   function changeRange(k: RangeKey) {
     setRange(k)
@@ -77,7 +98,6 @@ export function Home() {
       /* sem storage */
     }
   }
-
   function toggle(id: string) {
     const cur = chosen
     if (cur.includes(id)) setSelected(cur.filter((x) => x !== id))
@@ -85,16 +105,18 @@ export function Home() {
     else setSelected([...cur.slice(1), id])
   }
 
-  if (!analysis) return null
-
+  if (!analysis || !routines) return null
   const empty = summaries.length === 0
+  const runs = analysis.sessionsInRange.filter((s) => s.kind === 'run')
+  const gymCount = analysis.sessionsInRange.length - runs.length
+  const runKm = runs.reduce((n, s) => n + (s.distanceKm ?? 0), 0)
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[28px] font-extrabold tracking-tight lg:text-[32px]">Evolução</h1>
-          <p className="text-sm text-muted">Carga por exercício, o que aumentar no próximo treino e frequência.</p>
+          <p className="text-sm text-muted">Carga por exercício, o próximo treino e a semana.</p>
         </div>
         <div className="flex gap-1.5">
           {RANGES.map((r) => (
@@ -102,9 +124,7 @@ export function Home() {
               key={r.key}
               type="button"
               onClick={() => changeRange(r.key)}
-              className={`min-h-9 rounded-full px-3 text-xs font-medium ${
-                range === r.key ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-text'
-              }`}
+              className={`min-h-9 rounded-full px-3 text-xs font-medium ${range === r.key ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-text'}`}
             >
               {r.label}
             </button>
@@ -112,37 +132,64 @@ export function Home() {
         </div>
       </header>
 
-      <Link
-        to="/anotar"
-        className="tap flex items-center justify-center gap-2 rounded-full bg-accent px-6 font-semibold text-accent-ink lg:hidden"
-      >
-        <IconPlus /> Anotar treino de hoje
+      {/* Semana */}
+      <section className="card">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="label">Esta semana</span>
+          <Link to="/treinos" className="text-xs font-medium text-muted hover:text-accent">
+            Editar plano ›
+          </Link>
+        </div>
+        <div className="grid grid-cols-7 gap-1.5">
+          {week.map((w) => {
+            const doneAny = w.doneGym || w.doneRun
+            const missed = w.past && !doneAny && w.slot && w.slot.type !== 'rest'
+            const label = w.doneGym ? (routines.find((r) => r.id === w.doneGym!.routineId)?.name ?? '✓') : w.doneRun ? 'Corrida' : w.planned
+            const isRun = w.doneRun ? !w.doneGym : w.slot?.type === 'run'
+            return (
+              <div key={w.d} className={`flex flex-col items-center gap-1 rounded-lg py-2 ${w.isToday ? 'bg-surface-2' : ''}`}>
+                <span className={`text-[11px] font-semibold ${w.isToday ? 'text-text' : 'text-muted'}`}>{WEEKDAY_SHORT[w.d]}</span>
+                <span
+                  className={`grid h-8 min-w-8 place-items-center rounded-full px-2 font-display text-sm font-extrabold ${
+                    doneAny
+                      ? isRun
+                        ? 'bg-chart-2 text-white'
+                        : 'bg-accent text-accent-ink'
+                      : missed
+                        ? 'bg-transparent text-muted line-through outline-1 outline-line'
+                        : w.slot && w.slot.type !== 'rest'
+                          ? isRun
+                            ? 'bg-chart-2/15 text-chart-2'
+                            : 'bg-accent-soft text-accent'
+                          : 'text-muted'
+                  }`}
+                >
+                  {label === 'Corrida' ? 'C' : label === 'Descanso' || !label ? '—' : label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      <Link to="/anotar" className="tap flex items-center justify-center gap-2 rounded-full bg-accent px-6 font-semibold text-accent-ink lg:hidden">
+        <IconPlus /> Anotar {suggestion ? `treino ${suggestion.routine.name}` : 'treino de hoje'}
       </Link>
 
-      {empty ? (
-        <div className="card flex flex-col items-start gap-3 p-6">
-          <p className="max-w-prose text-muted">
-            Nada registrado ainda. Cole suas anotações do WhatsApp em <Link to="/anotar" className="font-semibold text-accent">Anotar</Link>, com uma
-            linha de data antes de cada dia, e o painel se preenche sozinho.
-          </p>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Treinos no período" value={String(analysis.sessionsInRange.length)} />
-            <Stat label="Exercícios acompanhados" value={String(summaries.length)} />
-            <Stat label="Recordes no período" value={String(analysis.prsInRange)} />
-            <Stat label="Para aumentar" value={String(toIncrease.length)} hint={toIncrease.length ? 'no próximo treino' : ''} />
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <section className="card flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="label">Carga máxima por sessão</div>
+            <div className="text-xs text-muted">até 4 exercícios · clique para trocar</div>
           </div>
-
-          <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-            <section className="card flex flex-col gap-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="label">Carga máxima por sessão</div>
-                <div className="text-xs text-muted">até 4 exercícios · clique para trocar</div>
-              </div>
+          {empty ? (
+            <p className="max-w-prose py-8 text-center text-sm text-muted">
+              Nada registrado ainda. Anote o treino de hoje em <Link to="/anotar" className="font-semibold text-accent">Anotar</Link> ou cole o histórico do WhatsApp com uma linha de data antes de cada dia.
+            </p>
+          ) : (
+            <>
               <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-                {summaries.slice(0, 14).map((s) => {
+                {summaries.slice(0, 16).map((s) => {
                   const idx = chosen.indexOf(s.exercise.id)
                   const on = idx >= 0
                   return (
@@ -150,9 +197,7 @@ export function Home() {
                       key={s.exercise.id}
                       type="button"
                       onClick={() => toggle(s.exercise.id)}
-                      className={`flex min-h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-medium ${
-                        on ? 'bg-surface-2 text-text' : 'text-muted hover:bg-surface-2'
-                      }`}
+                      className={`flex min-h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-medium ${on ? 'bg-surface-2 text-text' : 'text-muted hover:bg-surface-2'}`}
                     >
                       {on && <span className="inline-block h-0.5 w-3 rounded" style={{ background: COLORS[idx] }} />}
                       {s.exercise.name}
@@ -171,85 +216,132 @@ export function Home() {
                   ))}
                 </ul>
               )}
-            </section>
+            </>
+          )}
+        </section>
 
-            <section className="card flex flex-col gap-3">
-              <div className="label">Próximo treino</div>
-              {toIncrease.length === 0 && toDecrease.length === 0 ? (
-                <p className="text-sm text-muted">Nenhum ajuste marcado. Tudo em "manter".</p>
-              ) : (
-                <ul className="flex flex-col divide-y divide-line">
-                  {[...toIncrease, ...toDecrease].map((s) => {
-                    const cur = s.current!
-                    const up = cur.decision === 'aumentar'
-                    const next = up ? suggestNext(s.exercise, cur.maxWeightKg) : Math.max(0, cur.maxWeightKg - 2.5)
-                    return (
-                      <li key={s.exercise.id} className="flex items-center justify-between gap-3 py-2.5">
-                        <div className="min-w-0">
-                          <Link to={`/exercicios/${s.exercise.id}`} className="block truncate font-medium hover:text-accent">
-                            {s.exercise.name}
-                          </Link>
-                          <div className="text-xs text-muted">{fmtDayMonth(cur.date)} · {cur.reps.join(' · ')} reps</div>
-                        </div>
-                        <div className="num shrink-0 text-right text-sm">
-                          <span className="text-muted">{fmtKg(cur.maxWeightKg)}</span>
-                          <span className="mx-1 text-muted">→</span>
-                          <span className={up ? 'text-good' : 'text-warn'}>{fmtKg(next)}</span>
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </section>
+        <section className="card flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="label">Próximo treino</div>
+            {suggestion && (
+              <span className="text-xs text-muted">{suggestion.reason === 'hoje' ? 'plano de hoje' : 'próximo na sequência'}</span>
+            )}
           </div>
-
-          <section className="card overflow-x-auto p-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left">
-                  <th className="label px-4 py-3 font-semibold">Exercício</th>
-                  <th className="label px-3 py-3 text-right font-semibold">Carga</th>
-                  <th className="label px-3 py-3 font-semibold">Reps</th>
-                  <th className="label px-3 py-3 text-right font-semibold">Variação</th>
-                  <th className="label px-3 py-3 font-semibold">Próximo</th>
-                  <th className="label px-4 py-3 text-right font-semibold">Última vez</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {summaries.map((s) => {
-                  const c = s.current!
+          {!suggestion ? (
+            <p className="text-sm text-muted">
+              Nenhum treino cadastrado. <Link to="/treinos" className="font-semibold text-accent">Criar em Treinos</Link>.
+            </p>
+          ) : (
+            <>
+              <div className="flex items-baseline gap-2">
+                <span className="font-display text-[32px] font-extrabold leading-none tracking-tight">Treino {suggestion.routine.name}</span>
+                {suggestion.routine.description && <span className="text-xs text-muted">{suggestion.routine.description}</span>}
+              </div>
+              <ul className="flex flex-col divide-y divide-line">
+                {suggestion.routine.items.map((it, i) => {
+                  const cands = [it.exerciseId, ...(it.alternativeIds ?? [])]
+                    .map((id) => analysis.byExercise.get(id))
+                    .filter((s) => s?.current)
+                    .sort((a, b) => b!.current!.date - a!.current!.date)
+                  const s = cands[0] ?? analysis.byExercise.get(it.exerciseId)
+                  if (!s) return null
+                  const cur = s.current
+                  const up = cur?.decision === 'aumentar'
+                  const down = cur?.decision === 'diminuir'
+                  const next = cur ? (up ? suggestNext(s.exercise, cur.maxWeightKg) : down ? Math.max(0, cur.maxWeightKg - 2.5) : cur.maxWeightKg) : null
                   return (
-                    <tr key={s.exercise.id} className="hover:bg-surface-2/60">
-                      <td className="px-4 py-2.5">
-                        <Link to={`/exercicios/${s.exercise.id}`} className="font-medium hover:text-accent">
+                    <li key={`${it.exerciseId}-${i}`} className="flex items-center justify-between gap-3 py-2">
+                      <div className="min-w-0">
+                        <Link to={`/exercicios/${s.exercise.id}`} className="block truncate text-sm font-medium hover:text-accent">
                           {s.exercise.name}
                         </Link>
-                        {c.isPR && <span className="ml-2 rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold text-accent">PR</span>}
-                      </td>
-                      <td className="num px-3 py-2.5 text-right">{fmtKg(c.maxWeightKg)} kg</td>
-                      <td className="num px-3 py-2.5 text-muted">{c.reps.join(' · ')}</td>
-                      <td className={`num px-3 py-2.5 text-right ${s.deltaKg === null ? 'text-muted' : s.deltaKg > 0 ? 'text-good' : s.deltaKg < 0 ? 'text-warn' : 'text-muted'}`}>
-                        {s.deltaKg === null ? '—' : `${s.deltaKg > 0 ? '+' : ''}${fmtKg(s.deltaKg)}`}
-                      </td>
-                      <td className="px-3 py-2.5">{c.decision ? <Decision value={c.decision} /> : <span className="text-muted">—</span>}</td>
-                      <td className="px-4 py-2.5 text-right text-muted">{fmtDayMonth(c.date)}</td>
-                    </tr>
+                        <div className="text-[11px] text-muted">
+                          {it.targetSets}×{it.targetRepsMin}–{it.targetRepsMax}
+                          {it.rirMin !== undefined ? ` · RIR ${it.rirMin}–${it.rirMax ?? it.rirMin}` : ''}
+                          {cur ? ` · última ${fmtDayMonth(cur.date)}: ${cur.reps.join(' · ')}` : ' · nunca feito'}
+                        </div>
+                      </div>
+                      <div className="num shrink-0 text-right text-sm">
+                        {cur ? (
+                          up || down ? (
+                            <>
+                              <span className="text-muted">{fmtKg(cur.maxWeightKg)}</span>
+                              <span className="mx-1 text-muted">→</span>
+                              <span className={up ? 'text-good' : 'text-warn'}>{fmtKg(next!)}</span>
+                            </>
+                          ) : (
+                            <span>{fmtKg(cur.maxWeightKg)} kg</span>
+                          )
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </div>
+                    </li>
                   )
                 })}
-              </tbody>
-            </table>
-          </section>
+              </ul>
+              <Link to={`/anotar?treino=${suggestion.routine.id}`} className="tap flex items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent hover:bg-accent hover:text-accent-ink">
+                Anotar treino {suggestion.routine.name}
+              </Link>
+            </>
+          )}
+        </section>
+      </div>
 
-          <section className="card flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="label">Frequência · últimas 26 semanas</div>
-              <div className="text-xs text-muted">{analysis.dayCounts.size} dias com treino no total</div>
-            </div>
-            <Heatmap counts={analysis.dayCounts} />
-          </section>
-        </>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <Stat label="Treinos no período" value={String(gymCount)} />
+        <Stat label="Corridas" value={String(runs.length)} hint={runKm ? `${fmtKm(Math.round(runKm * 10) / 10)} km` : ''} />
+        <Stat label="Exercícios acompanhados" value={String(summaries.length)} />
+        <Stat label="Recordes no período" value={String(analysis.prsInRange)} />
+        <Stat label="Para aumentar" value={String(toIncrease)} hint={toIncrease ? 'marcados na última vez' : ''} />
+      </div>
+
+      {!empty && (
+        <section className="card overflow-x-auto p-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left">
+                <th className="label px-4 py-3 font-semibold">Exercício</th>
+                <th className="label px-3 py-3 text-right font-semibold">Carga</th>
+                <th className="label px-3 py-3 font-semibold">Reps</th>
+                <th className="label px-3 py-3 text-right font-semibold">Variação</th>
+                <th className="label px-3 py-3 font-semibold">Próximo</th>
+                <th className="label px-4 py-3 text-right font-semibold">Última vez</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {summaries.map((s) => {
+                const c = s.current!
+                return (
+                  <tr key={s.exercise.id} className="hover:bg-surface-2/60">
+                    <td className="px-4 py-2.5">
+                      <Link to={`/exercicios/${s.exercise.id}`} className="font-medium hover:text-accent">
+                        {s.exercise.name}
+                      </Link>
+                      {c.isPR && <span className="ml-2 rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold text-accent">PR</span>}
+                    </td>
+                    <td className="num px-3 py-2.5 text-right">{fmtKg(c.maxWeightKg)} kg</td>
+                    <td className="num px-3 py-2.5 text-muted">{c.reps.join(' · ')}</td>
+                    <td className={`num px-3 py-2.5 text-right ${s.deltaKg === null ? 'text-muted' : s.deltaKg > 0 ? 'text-good' : s.deltaKg < 0 ? 'text-warn' : 'text-muted'}`}>
+                      {s.deltaKg === null ? '—' : `${s.deltaKg > 0 ? '+' : ''}${fmtKg(s.deltaKg)}`}
+                    </td>
+                    <td className="px-3 py-2.5">{c.decision ? <Decision value={c.decision} /> : <span className="text-muted">—</span>}</td>
+                    <td className="px-4 py-2.5 text-right text-muted">{fmtDayMonth(c.date)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </section>
       )}
+
+      <section className="card flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="label">Frequência · últimas 26 semanas</div>
+          <div className="text-xs text-muted">{analysis.dayCounts.size} dias ativos no total</div>
+        </div>
+        <Heatmap counts={analysis.dayCounts} />
+      </section>
     </div>
   )
 }

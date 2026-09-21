@@ -45,6 +45,14 @@ export function analyze(
 ): Analysis {
   const finished = sessions.filter((s) => s.endedAt !== undefined).sort((a, b) => a.startedAt - b.startedAt)
   const sessionById = new Map(finished.map((s) => [s.id, s]))
+  const dayCounts = new Map<number, number>()
+  // Corridas contam como um dia ativo.
+  for (const s of finished) {
+    if (s.kind === 'run') {
+      const k = dayKey(s.startedAt)
+      dayCounts.set(k, (dayCounts.get(k) ?? 0) + 1)
+    }
+  }
   const logByKey = new Map(logs.map((l) => [`${l.sessionId}|${l.exerciseId}`, l]))
 
   // Agrupa séries por exercício e sessão.
@@ -60,7 +68,6 @@ export function analyze(
 
   const byExercise = new Map<string, ExerciseSummary>()
   let prsInRange = 0
-  const dayCounts = new Map<number, number>()
 
   for (const ex of exercises) {
     const bySession = grouped.get(ex.id)

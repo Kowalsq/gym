@@ -33,6 +33,6 @@ React 19, TypeScript, Vite, Tailwind CSS 4, Dexie (IndexedDB), React Router, vit
 src/
   db/        schema Dexie, seed de exercícios, consultas
   lib/       regras puras (métricas, formatação) e testes
-  components/ shell com navegação inferior, ícones
+  components/ shell (abas no celular, barra lateral no PC), gráfico, heatmap, ícones
   pages/     uma tela por arquivo (Home é o painel de evolução, QuickNote é o Anotar)
 ```

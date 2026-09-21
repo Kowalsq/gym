@@ -4,12 +4,11 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { Decision } from '../components/Decision'
 import { IconBack } from '../components/Icons'
 import { LineChart } from '../components/LineChart'
-import { db, type Equipment, type MuscleGroup } from '../db/schema'
+import { db, type Equipment } from '../db/schema'
 import { analyze } from '../lib/analysis'
-import { EQUIPMENT_LABEL, MUSCLE_LABEL, fmtDayMonth, fmtKg } from '../lib/format'
+import { EQUIPMENT_LABEL, fmtDayMonth, fmtKg, muscleLabel } from '../lib/format'
 import { epley1RM } from '../lib/metrics'
 
-const GROUPS = Object.keys(MUSCLE_LABEL) as MuscleGroup[]
 const EQUIPMENTS = Object.keys(EQUIPMENT_LABEL) as Equipment[]
 
 export function ExerciseDetail() {
@@ -20,6 +19,8 @@ export function ExerciseDetail() {
   const sets = useLiveQuery(() => db.sets.where('[exerciseId+doneAt]').between([id, -Infinity], [id, Infinity]).toArray(), [id])
   const logs = useLiveQuery(() => db.logs.where('exerciseId').equals(id).toArray(), [id])
   const [editing, setEditing] = useState(false)
+  const allExercises = useLiveQuery(() => db.exercises.toArray(), [])
+  const groups = useMemo(() => [...new Set((allExercises ?? []).map((e) => e.muscleGroup))].sort(), [allExercises])
 
   const summary = useMemo(() => {
     if (!exercise || !sessions || !sets || !logs) return null
@@ -51,7 +52,7 @@ export function ExerciseDetail() {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="label">
-            {MUSCLE_LABEL[exercise.muscleGroup]} · {EQUIPMENT_LABEL[exercise.equipment]}
+            {muscleLabel(exercise.muscleGroup)} · {EQUIPMENT_LABEL[exercise.equipment]}
           </div>
           <h1 className="font-display text-[24px] font-extrabold tracking-tight lg:text-[30px]">{exercise.name}</h1>
         </div>
@@ -73,11 +74,18 @@ export function ExerciseDetail() {
           </label>
           <label className="flex flex-col gap-1">
             <span className="label">Grupo</span>
-            <select id="ex-group" value={exercise.muscleGroup} onChange={(e) => db.exercises.update(id, { muscleGroup: e.target.value as MuscleGroup })} className="field h-11 px-3">
-              {GROUPS.map((g) => (
-                <option key={g} value={g}>{MUSCLE_LABEL[g]}</option>
+            <input
+              id="ex-group"
+              list="muscle-groups-detail"
+              defaultValue={exercise.muscleGroup}
+              onBlur={(e) => e.target.value.trim() && db.exercises.update(id, { muscleGroup: e.target.value.trim() })}
+              className="field h-11 px-3"
+            />
+            <datalist id="muscle-groups-detail">
+              {groups.map((g) => (
+                <option key={g} value={g} />
               ))}
-            </select>
+            </datalist>
           </label>
           <label className="flex flex-col gap-1">
             <span className="label">Equipamento</span>
@@ -86,6 +94,25 @@ export function ExerciseDetail() {
                 <option key={g} value={g}>{EQUIPMENT_LABEL[g]}</option>
               ))}
             </select>
+          </label>
+          <label className="flex items-center gap-2 text-sm sm:col-span-3">
+            <input
+              id="ex-compound"
+              type="checkbox"
+              checked={!!exercise.isCompound}
+              onChange={(e) => db.exercises.update(id, { isCompound: e.target.checked || undefined })}
+              className="size-4 accent-accent"
+            />
+            Composto (6–8 reps, RIR 1–2)
+          </label>
+          <label className="flex flex-col gap-1 sm:col-span-3">
+            <span className="label">Outros nomes aceitos na anotação (separados por vírgula)</span>
+            <input
+              id="ex-aliases"
+              defaultValue={(exercise.aliases ?? []).join(', ')}
+              onBlur={(e) => db.exercises.update(id, { aliases: e.target.value.split(',').map((a) => a.trim()).filter(Boolean) })}
+              className="field h-11 px-3"
+            />
           </label>
           <label className="flex flex-col gap-1 sm:col-span-3">
             <span className="label">Anotações fixas (ajuste de banco, pegada…)</span>

@@ -64,6 +64,12 @@ export const IconBack = (p: P) => (
   </svg>
 )
 
+export const IconList = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+  </svg>
+)
+
 export const IconSearch = (p: P) => (
   <svg {...base} {...p}>
     <circle cx="11" cy="11" r="7" />

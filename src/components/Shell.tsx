@@ -1,19 +1,22 @@
 import { NavLink, Outlet } from 'react-router'
-import { IconDumbbell, IconHistory, IconHome, IconPlus, IconSettings } from './Icons'
+import { IconDumbbell, IconHistory, IconHome, IconList, IconPlus, IconSettings } from './Icons'
 
 const tabs = [
-  { to: '/', label: 'Evolução', Icon: IconHome },
-  { to: '/anotar', label: 'Anotar', Icon: IconPlus },
-  { to: '/historico', label: 'Histórico', Icon: IconHistory },
-  { to: '/exercicios', label: 'Exercícios', Icon: IconDumbbell },
-  { to: '/ajustes', label: 'Ajustes', Icon: IconSettings },
+  { to: '/', label: 'Evolução', Icon: IconHome, mobile: true },
+  { to: '/anotar', label: 'Anotar', Icon: IconPlus, mobile: true },
+  { to: '/historico', label: 'Histórico', Icon: IconHistory, mobile: true },
+  { to: '/treinos', label: 'Treinos', Icon: IconList, mobile: true },
+  { to: '/exercicios', label: 'Exercícios', Icon: IconDumbbell, mobile: false },
+  { to: '/ajustes', label: 'Ajustes', Icon: IconSettings, mobile: true },
 ]
 
 /**
  * Layout: no celular, abas embaixo; no PC (lg), barra lateral fixa e
- * conteúdo largo. A tela de Anotar é a primeira coisa no celular.
+ * conteúdo largo. Exercícios só aparece na barra lateral; no celular
+ * chega-se por Treinos ou Ajustes.
  */
 export function Shell() {
+  const mobileTabs = tabs.filter((t) => t.mobile)
   return (
     <div className="flex h-full flex-col lg:flex-row">
       <aside className="hidden w-56 shrink-0 flex-col border-r border-line px-3 py-6 lg:flex">
@@ -42,15 +45,13 @@ export function Shell() {
       </main>
 
       <nav className="grid grid-cols-5 border-t border-line bg-bg px-1 pt-2 pb-[calc(env(safe-area-inset-bottom,0px)+10px)] lg:hidden">
-        {tabs.map(({ to, label, Icon }) => (
+        {mobileTabs.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `tap flex flex-col items-center gap-1 rounded-lg py-1 text-[11px] font-medium ${
-                isActive ? 'text-accent' : 'text-muted'
-              }`
+              `tap flex flex-col items-center gap-1 rounded-lg py-1 text-[11px] font-medium ${isActive ? 'text-accent' : 'text-muted'}`
             }
           >
             <Icon />

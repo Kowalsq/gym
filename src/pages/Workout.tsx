@@ -14,7 +14,7 @@ import {
   setsOfSession,
 } from '../db/queries'
 import { db, type Exercise, type SetEntry } from '../db/schema'
-import { EQUIPMENT_LABEL, MUSCLE_LABEL, fmtClock, fmtKg } from '../lib/format'
+import { EQUIPMENT_LABEL, fmtClock, fmtKg, muscleLabel } from '../lib/format'
 
 function useNow(intervalMs: number) {
   const [now, setNow] = useState(() => Date.now())
@@ -152,7 +152,7 @@ function ExerciseBlock({ sessionId, exercise, sets }: { sessionId: string; exerc
         <div>
           <div className="text-[15px] font-semibold">{exercise.name}</div>
           <div className="text-xs text-muted">
-            {EQUIPMENT_LABEL[exercise.equipment]} · {MUSCLE_LABEL[exercise.muscleGroup]}
+            {EQUIPMENT_LABEL[exercise.equipment]} · {muscleLabel(exercise.muscleGroup)}
           </div>
         </div>
         <button
@@ -303,7 +303,7 @@ function ExercisePicker({
               className="tap flex w-full items-center justify-between border-b border-line py-3 text-left"
             >
               <span className="font-medium">{e.name}</span>
-              <span className="text-xs text-muted">{MUSCLE_LABEL[e.muscleGroup]}</span>
+              <span className="text-xs text-muted">{muscleLabel(e.muscleGroup)}</span>
             </button>
           </li>
         ))}

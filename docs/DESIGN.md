@@ -78,16 +78,23 @@ O laranja é o único acento. Verde e amarelo são semânticos (melhorou, piorou
 ## Modelo de dados
 
 ```
-Exercise        { id, name, muscleGroup, equipment, notes?, createdAt }
-Routine         { id, name, order, items: RoutineItem[] }
-RoutineItem     { exerciseId, targetSets, targetRepsMin, targetRepsMax, restSeconds? }
-Session         { id, routineId?, name, startedAt, endedAt?, notes? }
+Exercise        { id, name, muscleGroup (texto livre), equipment, isCompound?, aliases?, notes?, createdAt }
+Routine         { id, name ("A"), description?, order, items: RoutineItem[] }
+RoutineItem     { exerciseId, alternativeIds?, targetSets, targetRepsMin, targetRepsMax, rirMin?, rirMax? }
+Session         { id, kind ('gym'|'run'), routineId?, name, startedAt, endedAt?, distanceKm?, durationSec? }
+Setting         { key, value }   → 'weekPlan': 7 slots (rest | run | routine)
 SetEntry        { id, sessionId, exerciseId, setNumber, weightKg, reps, isWarmup, rpe?, doneAt }
 ExerciseLog     { id, sessionId, exerciseId, decision (manter|aumentar|diminuir|null), note?, raw? }
 BodyWeight      { id, date, kg }                       (fase 4)
 ```
 
 `ExerciseLog` é um por exercício por sessão e guarda a decisão para o próximo treino e o texto original digitado.
+
+## O programa
+
+Três treinos full body, A, B e C, com 2 séries por exercício. Compostos (marcados com *) em 6–8 reps com RIR 1–2; isolados em 8–10 ou 10–12 com RIR 0–1. Alguns itens aceitam alternativa ("Remada Baixa no Cabo ou Remada em Máquina", "Stiff ou Cadeira Flexora"). Plano da semana: Seg A, Ter corrida, Qua B, Qui corrida, Sex C. Tudo isso é carregado na primeira abertura por `src/db/seed.ts` e editável na tela Treinos.
+
+**Próximo treino**: se o plano de hoje tem um treino e ele ainda não foi feito, é ele. Senão, o próximo na sequência depois do último registrado (A → B → C → A).
 
 Índices Dexie: `SetEntry` por `[exerciseId+doneAt]` (busca "última vez" e gráfico de progresso) e por `sessionId`. `Session` por `startedAt`.
 
@@ -100,30 +107,36 @@ Regras derivadas, calculadas e não armazenadas:
 
 ## Telas
 
-Cinco seções: **Evolução · Anotar · Histórico · Exercícios · Ajustes**. No PC, barra lateral fixa à esquerda e conteúdo largo. No celular, abas embaixo.
+Seis seções: **Evolução · Anotar · Histórico · Treinos · Exercícios · Ajustes**. No PC, barra lateral fixa à esquerda e conteúdo largo. No celular, abas embaixo (Exercícios fica acessível por Treinos).
 
 ### 1. Evolução (tela inicial, foco no PC)
+- **Esta semana**: sete dias com o plano (A, B, C, C de corrida, traço para descanso). Feito fica preenchido, hoje destacado, planejado e não feito fica riscado.
 - Filtro de período em uma linha: 30 dias, 90 dias, 6 meses, 1 ano, tudo. Vale para tudo abaixo.
-- Quatro números: treinos no período, exercícios acompanhados, recordes no período, quantos exercícios estão marcados para aumentar.
 - **Gráfico de carga máxima por sessão**, até quatro exercícios ao mesmo tempo, com tooltip que mostra reps de cada série. Cores de série em ordem fixa, validadas para daltonismo (`--chart-1..4`).
-- **Próximo treino**: lista do que foi marcado "aumentar" ou "diminuir" na última vez, com a carga atual e a sugerida (2,5 kg em barra e halter, 5 kg em máquina e cabo).
+- **Próximo treino**: qual treino é (plano de hoje ou sequência), a lista de exercícios com alvo (séries × faixa · RIR), última carga e reps, e a carga sugerida quando marcou aumentar ou diminuir (2,5 kg em barra e halter, 5 kg em máquina e cabo). Botão "Anotar treino X".
+- Cinco números: treinos, corridas (com km), exercícios acompanhados, recordes, marcados para aumentar.
 - Tabela de todos os exercícios: carga atual, reps, variação no período, decisão, última vez. Selo PR quando a última sessão foi recorde.
-- Heatmap de frequência das últimas 26 semanas.
-- No celular, um botão "Anotar treino de hoje" no topo.
+- Heatmap de frequência das últimas 26 semanas. Corridas contam como dia ativo.
 
 ### 2. Anotar (foco no celular)
+- Chips de modo: Treino A / B / C (o sugerido vem marcado), Corrida, Livre. Vem de `?treino=` quando chega pelo botão do painel.
+- **Preencher com o treino X e a última carga**: gera uma linha por exercício do treino com a última carga (ou a sugerida, se marcou aumentar) e as reps da última vez. Se da última vez foi feita a alternativa, mantém a alternativa. Você só edita os números.
 - Caixa de texto com o formato do WhatsApp, rascunho salvo automaticamente, seletor de dia.
-- Abaixo, "o que entendi": cada linha interpretada, com nome, peso, reps, decisão e avisos. Nomes desconhecidos ganham o selo "novo".
-- Salvar grava uma sessão por dia. Nomes casam com a biblioteca por igualdade (sem acento e caixa) ou por prefixo único quando têm duas ou mais palavras. Um nome só de uma palavra nunca casa por prefixo.
+- Abaixo, "o que entendi": cada linha com nome, peso, reps, decisão, avisos e o alvo da rotina. Reps fora da faixa ficam em amarelo. Nomes desconhecidos ganham o selo "novo".
+- Salvar grava uma sessão de musculação por dia (com a rotina escolhida) e uma sessão por linha de corrida. Nomes casam com a biblioteca por nome ou alias exato (sem acento e caixa) ou por prefixo único quando têm duas ou mais palavras.
 - Aceita histórico inteiro colado, com linhas de data separando os dias e prefixos de exportação do WhatsApp.
 
 ### 3. Histórico
-- Lista por data com totais do mês. Detalhe da sessão mostra cada exercício com carga, reps e decisão, e tem "Copiar como texto".
+- Lista por data com totais do mês (treinos e corridas). Corrida mostra distância, tempo e ritmo. Detalhe da sessão mostra cada exercício com carga, reps e decisão, e tem "Copiar como texto".
 
-### 4. Exercícios
-- Busca, filtro por grupo muscular, cadastro. Detalhe com carga atual, recorde, 1RM estimado, gráfico e lista de sessões com decisão. Edição de nome, grupo, equipamento e anotações fixas.
+### 4. Treinos
+- Plano da semana: sete seletores (descanso, corrida ou um treino).
+- Um card por treino com os exercícios, alvo de séries × reps e RIR, alternativas. Editar: mudar números, reordenar, remover, adicionar exercício (composto entra como 2×6–8 RIR 1–2, isolado como 2×10–12 RIR 0–1), renomear, apagar. Novo treino.
 
-### 5. Ajustes
+### 5. Exercícios
+- Busca, filtro por grupo muscular (as categorias do programa), cadastro com grupo livre e flag de composto. Detalhe com carga atual, recorde, 1RM estimado, gráfico e lista de sessões com decisão. Edição de nome, grupo, equipamento, composto, outros nomes aceitos e anotações fixas.
+
+### 6. Ajustes
 - Tema, backup JSON (exportar e importar), exportação de todo o histórico no formato de texto original.
 
 ### Treino em andamento (secundário)
@@ -131,10 +144,10 @@ Cinco seções: **Evolução · Anotar · Histórico · Exercícios · Ajustes**
 
 ## Fases
 
-1. **Feito**: anotar por texto, importação do WhatsApp, painel de evolução com gráfico, próximo treino, tabela, heatmap, histórico, exercícios, backup e exportação em texto.
-2. **Refino do painel**: comparar períodos (este mês vs. anterior), volume semanal por grupo muscular, meta por exercício com linha no gráfico, marcar semanas de deload e lesões para explicar quedas.
-3. **Anotar mais rápido**: sugestão de linha pronta com o último treino de cada exercício para só editar o número, atalhos no celular (PWA instalada), ícones PNG.
-4. **Extras**: peso corporal, calculadora de anilhas, sincronização opcional entre PC e celular via arquivo.
+1. **Feito**: anotar por texto, importação do WhatsApp, painel de evolução com gráfico, próximo treino, tabela, heatmap, histórico, exercícios, backup e exportação em texto, rotinas A/B/C com RIR, plano semanal, corrida, preenchimento do treino do dia.
+2. **Refino do painel**: comparar períodos (este mês vs. anterior), volume semanal por grupo muscular, meta por exercício com linha no gráfico, marcar semanas de deload e lesões para explicar quedas, gráfico de ritmo e distância das corridas.
+3. **Celular**: PWA instalada com ícones PNG, atalho direto para Anotar, sincronização entre PC e celular via arquivo ou nuvem pessoal.
+4. **Extras**: peso corporal, calculadora de anilhas, RIR anotado por série.
 
 ## Fora de escopo por agora
 

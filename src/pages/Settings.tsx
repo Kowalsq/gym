@@ -32,6 +32,7 @@ export function Settings() {
       sessions: await db.sessions.toArray(),
       sets: await db.sets.toArray(),
       logs: await db.logs.toArray(),
+      settings: await db.settings.toArray(),
     }
     download(`ferro-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2), 'application/json')
     setMsg('Backup exportado.')
@@ -49,7 +50,7 @@ export function Settings() {
     const logByKey = new Map(logs.map((l) => [`${l.sessionId}|${l.exerciseId}`, l]))
     const blocks: string[] = []
     for (const s of sessions) {
-      if (s.endedAt === undefined) continue
+      if (s.endedAt === undefined || s.kind === 'run') continue
       const d = new Date(s.startedAt)
       const lines = [`${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`]
       for (const exId of s.exerciseIds) {
@@ -69,13 +70,14 @@ export function Settings() {
       const data = JSON.parse(await file.text())
       if (data.app !== 'ferro') throw new Error('Arquivo não é um backup do Ferro.')
       if (!confirm('Importar vai substituir todos os dados atuais. Continuar?')) return
-      await db.transaction('rw', db.exercises, db.routines, db.sessions, db.sets, db.logs, async () => {
-        await Promise.all([db.exercises.clear(), db.routines.clear(), db.sessions.clear(), db.sets.clear(), db.logs.clear()])
+      await db.transaction('rw', [db.exercises, db.routines, db.sessions, db.sets, db.logs, db.settings], async () => {
+        await Promise.all([db.exercises.clear(), db.routines.clear(), db.sessions.clear(), db.sets.clear(), db.logs.clear(), db.settings.clear()])
         await db.exercises.bulkAdd(data.exercises ?? [])
         await db.routines.bulkAdd(data.routines ?? [])
         await db.sessions.bulkAdd(data.sessions ?? [])
         await db.sets.bulkAdd(data.sets ?? [])
         await db.logs.bulkAdd(data.logs ?? [])
+        await db.settings.bulkAdd(data.settings ?? [])
       })
       setMsg('Backup importado.')
     } catch (e) {
