@@ -13,6 +13,11 @@
   --accent-soft: rgba(255, 122, 26, 0.14);
   --good: #4cc38a;
   --warn: #f2c94c;
+  /* Séries de gráfico, ordem fixa, validadas para daltonismo sobre --surface. */
+  --chart-1: #d96a12;
+  --chart-2: #4a90e2;
+  --chart-3: #8f8f14;
+  --chart-4: #b85cc6;
   color-scheme: dark;
 }
 
@@ -28,6 +33,10 @@
   --accent-soft: rgba(226, 98, 10, 0.12);
   --good: #1f8f5b;
   --warn: #b08600;
+  --chart-1: #d95f0e;
+  --chart-2: #2b7be0;
+  --chart-3: #7e8a00;
+  --chart-4: #a040c0;
   color-scheme: light;
 }
 
@@ -43,6 +52,10 @@
   --color-accent-soft: var(--accent-soft);
   --color-good: var(--good);
   --color-warn: var(--warn);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
   --font-display: 'Archivo', system-ui, sans-serif;
   --font-body: 'Public Sans', system-ui, sans-serif;
   --radius-card: 12px;

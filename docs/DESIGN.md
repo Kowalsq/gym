@@ -1,15 +1,32 @@
 # Ferro — documento de design
 
-App pessoal para registrar treinos de academia: séries, repetições e carga, com histórico e progresso por exercício. Feito para ser usado com uma mão, no celular, entre uma série e outra.
+App pessoal de desenvolvimento na academia. Duas superfícies com pesos diferentes:
+
+- **PC (principal):** tela de evolução pessoal. Histórico, gráficos de carga por exercício, o que aumentar no próximo treino, frequência. Não copia apps de treino existentes; é o painel de uma pessoa só.
+- **Celular (secundário):** só anotar. Substitui a mensagem que hoje vai para o WhatsApp, no mesmo formato de texto, uma linha por exercício.
 
 > Nome provisório. "Ferro" é curto, cabe em um ícone e remete direto ao assunto.
 
+## O formato da anotação
+
+É o que já é usado hoje e o app aceita exatamente assim:
+
+```
+Desenvolvimento máquina 75 10 7 manter
+Remada baixa 120 10 8 manter
+Crucifixo invertido 30kg 10 8 manter
+Crucifixo 2x8 55kg manter
+```
+
+Nome do exercício, peso (com ou sem "kg"), repetições de cada série ou `NxR`, e a decisão para o próximo treino: **manter**, **aumentar** ou **diminuir**. Uma linha só com data (`21/09`) abre um novo dia, o que permite colar o histórico inteiro do WhatsApp de uma vez. O parser está em `src/lib/parse.ts` com testes.
+
 ## Princípios
 
-1. **Lançar uma série leva menos de 3 segundos.** Tela de treino é a mais importante; tudo nela tem alvo de toque grande (mínimo 48 px) e o teclado numérico abre já com o valor anterior preenchido.
-2. **A última vez sempre visível.** Ao lançar uma série, o app mostra o que foi feito no mesmo exercício na sessão anterior. É o recurso que faz a pessoa progredir.
-3. **Offline primeiro.** Todos os dados ficam no aparelho (IndexedDB). Nada depende de rede.
-4. **Pouca cerimônia.** Sem login, sem onboarding longo. Abre e treina.
+1. **Anotar no celular leva o mesmo tempo que no WhatsApp.** Uma caixa de texto, o mesmo formato, um botão salvar. O app confere e mostra o que entendeu antes de gravar.
+2. **A decisão é dado, não comentário.** "Manter" e "aumentar" são gravados e viram uma lista do que fazer no próximo treino, e um sinal no gráfico.
+3. **No PC, evolução em primeiro lugar.** A tela inicial é o painel: carga ao longo do tempo por exercício, tabela com estado atual de cada exercício, frequência.
+4. **Offline primeiro.** Todos os dados ficam no aparelho (IndexedDB). Nada depende de rede. Backup em JSON e exportação no formato de texto original.
+5. **Pouca cerimônia.** Sem login, sem onboarding. Abre e anota.
 
 ## Stack
 
@@ -66,8 +83,11 @@ Routine         { id, name, order, items: RoutineItem[] }
 RoutineItem     { exerciseId, targetSets, targetRepsMin, targetRepsMax, restSeconds? }
 Session         { id, routineId?, name, startedAt, endedAt?, notes? }
 SetEntry        { id, sessionId, exerciseId, setNumber, weightKg, reps, isWarmup, rpe?, doneAt }
+ExerciseLog     { id, sessionId, exerciseId, decision (manter|aumentar|diminuir|null), note?, raw? }
 BodyWeight      { id, date, kg }                       (fase 4)
 ```
+
+`ExerciseLog` é um por exercício por sessão e guarda a decisão para o próximo treino e o texto original digitado.
 
 Índices Dexie: `SetEntry` por `[exerciseId+doneAt]` (busca "última vez" e gráfico de progresso) e por `sessionId`. `Session` por `startedAt`.
 
@@ -80,39 +100,42 @@ Regras derivadas, calculadas e não armazenadas:
 
 ## Telas
 
-Navegação inferior com quatro abas: **Início · Histórico · Exercícios · Ajustes**. A tela de treino em andamento cobre a navegação enquanto ativa.
+Cinco seções: **Evolução · Anotar · Histórico · Exercícios · Ajustes**. No PC, barra lateral fixa à esquerda e conteúdo largo. No celular, abas embaixo.
 
-### 1. Início
-- Botão primário grande: **Iniciar treino**. Se houver rotinas, mostra a próxima da sequência (A → B → C) como padrão e as outras como opções.
-- Semana atual em sete pontos (treinou / não treinou).
-- Último treino: nome, data, duração, volume.
+### 1. Evolução (tela inicial, foco no PC)
+- Filtro de período em uma linha: 30 dias, 90 dias, 6 meses, 1 ano, tudo. Vale para tudo abaixo.
+- Quatro números: treinos no período, exercícios acompanhados, recordes no período, quantos exercícios estão marcados para aumentar.
+- **Gráfico de carga máxima por sessão**, até quatro exercícios ao mesmo tempo, com tooltip que mostra reps de cada série. Cores de série em ordem fixa, validadas para daltonismo (`--chart-1..4`).
+- **Próximo treino**: lista do que foi marcado "aumentar" ou "diminuir" na última vez, com a carga atual e a sugerida (2,5 kg em barra e halter, 5 kg em máquina e cabo).
+- Tabela de todos os exercícios: carga atual, reps, variação no período, decisão, última vez. Selo PR quando a última sessão foi recorde.
+- Heatmap de frequência das últimas 26 semanas.
+- No celular, um botão "Anotar treino de hoje" no topo.
 
-### 2. Treino em andamento
-- Cabeçalho: nome do treino, cronômetro total, botão **Concluir**.
-- Lista de exercícios. Cada exercício tem uma tabela: `#` · `Anterior` · `kg` · `Reps` · `✓`.
-- Nova série já vem preenchida com os valores da série anterior. Toque no ✓ conclui e inicia o timer de descanso.
-- Timer de descanso fixo no rodapé, com `+30 s` e **Pular**.
-- Ações rápidas por exercício: **+ série**, **Anotação**, **Trocar exercício**.
-- **Adicionar exercício** ao final para treinos livres.
+### 2. Anotar (foco no celular)
+- Caixa de texto com o formato do WhatsApp, rascunho salvo automaticamente, seletor de dia.
+- Abaixo, "o que entendi": cada linha interpretada, com nome, peso, reps, decisão e avisos. Nomes desconhecidos ganham o selo "novo".
+- Salvar grava uma sessão por dia. Nomes casam com a biblioteca por igualdade (sem acento e caixa) ou por prefixo único quando têm duas ou mais palavras. Um nome só de uma palavra nunca casa por prefixo.
+- Aceita histórico inteiro colado, com linhas de data separando os dias e prefixos de exportação do WhatsApp.
 
 ### 3. Histórico
-- Lista por data (mais recente no topo). Card: nome, dia, duração, volume, quantidade de PRs.
-- Toque abre a sessão completa, com opção de editar valores.
+- Lista por data com totais do mês. Detalhe da sessão mostra cada exercício com carga, reps e decisão, e tem "Copiar como texto".
 
 ### 4. Exercícios
-- Busca e filtro por grupo muscular. Item mostra PR atual e data da última execução.
-- Detalhe do exercício (fase 3): gráfico de carga máxima por sessão, PRs, últimas 5 sessões e anotações fixas (ajuste de banco, pegada).
+- Busca, filtro por grupo muscular, cadastro. Detalhe com carga atual, recorde, 1RM estimado, gráfico e lista de sessões com decisão. Edição de nome, grupo, equipamento e anotações fixas.
 
 ### 5. Ajustes
-- Rotinas (criar e ordenar), unidade, tema, exportar / importar JSON.
+- Tema, backup JSON (exportar e importar), exportação de todo o histórico no formato de texto original.
+
+### Treino em andamento (secundário)
+- Lançamento série a série com coluna "anterior", cronômetro e aquecimento. Existe, mas o caminho principal no celular é Anotar.
 
 ## Fases
 
-1. **MVP**: exercícios, iniciar treino livre, lançar séries, histórico, "anterior" na linha da série.
-2. **Rotinas e fluidez**: rotinas A/B/C, timer de descanso, repetir série, anotações por exercício.
-3. **Progresso**: gráfico por exercício, PRs com aviso na hora, volume semanal por grupo muscular, 1RM estimado, sugestão de progressão.
-4. **Extras**: exportar e importar, peso corporal, calculadora de anilhas, heatmap de frequência, tema claro refinado.
+1. **Feito**: anotar por texto, importação do WhatsApp, painel de evolução com gráfico, próximo treino, tabela, heatmap, histórico, exercícios, backup e exportação em texto.
+2. **Refino do painel**: comparar períodos (este mês vs. anterior), volume semanal por grupo muscular, meta por exercício com linha no gráfico, marcar semanas de deload e lesões para explicar quedas.
+3. **Anotar mais rápido**: sugestão de linha pronta com o último treino de cada exercício para só editar o número, atalhos no celular (PWA instalada), ícones PNG.
+4. **Extras**: peso corporal, calculadora de anilhas, sincronização opcional entre PC e celular via arquivo.
 
 ## Fora de escopo por agora
 
-Login, sincronização entre aparelhos, planos de treino prontos, rede social. Podem entrar depois sem mudar o modelo de dados.
+Login, servidor, planos de treino prontos, rede social. Podem entrar depois sem mudar o modelo de dados.

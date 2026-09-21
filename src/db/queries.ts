@@ -28,8 +28,9 @@ export async function finishSession(sessionId: string): Promise<void> {
 }
 
 export async function discardSession(sessionId: string): Promise<void> {
-  await db.transaction('rw', db.sessions, db.sets, async () => {
+  await db.transaction('rw', db.sessions, db.sets, db.logs, async () => {
     await db.sets.where('sessionId').equals(sessionId).delete()
+    await db.logs.where('sessionId').equals(sessionId).delete()
     await db.sessions.delete(sessionId)
   })
 }

@@ -1,6 +1,6 @@
 # Ferro
 
-App pessoal para registrar treinos de academia: séries, repetições e carga, com histórico e progresso por exercício. PWA, funciona offline, dados ficam no aparelho.
+App pessoal de evolução na academia. No celular você anota o treino em texto, no mesmo formato que já usava no WhatsApp; no PC você vê a evolução: carga por exercício, o que aumentar no próximo treino, frequência. PWA, funciona offline, dados ficam no aparelho.
 
 Design, modelo de dados e fases estão em [docs/DESIGN.md](docs/DESIGN.md). Mockups das telas em [docs/mockups.html](docs/mockups.html).
 
@@ -34,5 +34,5 @@ src/
   db/        schema Dexie, seed de exercícios, consultas
   lib/       regras puras (métricas, formatação) e testes
   components/ shell com navegação inferior, ícones
-  pages/     uma pasta por tela
+  pages/     uma tela por arquivo (Home é o painel de evolução, QuickNote é o Anotar)
 ```
