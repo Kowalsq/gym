@@ -8,6 +8,7 @@ import { analyze, suggestNext } from '../lib/analysis'
 import { fmtDayMonth, fmtKg, fmtKm, fmtClock } from '../lib/format'
 import { formatLine, formatRunLine, parseNotes } from '../lib/parse'
 import { suggestRoutine } from '../lib/plan'
+import { QuickForm } from './QuickForm'
 
 const EXAMPLE = `Desenvolvimento máquina 75 10 7 manter
 Remada baixa 120 10 8 manter
@@ -50,6 +51,21 @@ export function QuickNote() {
   })
   const [date, setDate] = useState(() => toInputDate(todayMidnight()))
   const [mode, setMode] = useState<Mode | null>(null)
+  const [entry, setEntry] = useState<'form' | 'text'>(() => {
+    try {
+      return localStorage.getItem('ferro:entry') === 'text' ? 'text' : 'form'
+    } catch {
+      return 'form'
+    }
+  })
+  function changeEntry(v: 'form' | 'text') {
+    setEntry(v)
+    try {
+      localStorage.setItem('ferro:entry', v)
+    } catch {
+      /* sem storage */
+    }
+  }
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState<string | null>(null)
 
@@ -122,18 +138,22 @@ export function QuickNote() {
     onChange(lastRun ? formatRunLine(lastRun.distanceKm!, lastRun.durationSec!) : 'Corrida 5km 30:00')
   }
 
+  function describe(r: { sets: number; sessions: number; runs: number; newExercises: number }) {
+    const parts = [
+      r.sets ? `${r.sets} séries em ${r.sessions} treino${r.sessions === 1 ? '' : 's'}` : '',
+      r.runs ? `${r.runs} corrida${r.runs === 1 ? '' : 's'}` : '',
+      r.newExercises ? `${r.newExercises} exercício${r.newExercises === 1 ? '' : 's'} novo${r.newExercises === 1 ? '' : 's'}` : '',
+    ].filter(Boolean)
+    return `Salvo: ${parts.join(', ')}.`
+  }
+
   async function onSave() {
     if ((validLifts === 0 && validRuns === 0) || saving) return
     setSaving(true)
     try {
       const r = await saveParsedDays(days, exercises ?? [], routine ? { routineId: routine.id, routineName: routine.name } : {})
       onChange('')
-      const parts = [
-        r.sets ? `${r.sets} séries em ${r.sessions} treino${r.sessions === 1 ? '' : 's'}` : '',
-        r.runs ? `${r.runs} corrida${r.runs === 1 ? '' : 's'}` : '',
-        r.newExercises ? `${r.newExercises} exercício${r.newExercises === 1 ? '' : 's'} novo${r.newExercises === 1 ? '' : 's'}` : '',
-      ].filter(Boolean)
-      setDone(`Salvo: ${parts.join(', ')}.`)
+      setDone(describe(r))
     } finally {
       setSaving(false)
     }
@@ -146,7 +166,9 @@ export function QuickNote() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[28px] font-extrabold tracking-tight">Anotar</h1>
-          <p className="text-sm text-muted">Uma linha por exercício, do jeito que você já escreve.</p>
+          <p className="text-sm text-muted">
+            {routine && entry === 'form' ? 'Carga da última vez já preenchida. Digite só as reps de cada série.' : 'Uma linha por exercício, do jeito que você já escreve.'}
+          </p>
         </div>
         <label className="flex items-center gap-2 text-sm">
           <span className="label">Dia</span>
@@ -183,6 +205,41 @@ export function QuickNote() {
         </div>
       )}
 
+      {routine && (
+        <div className="flex items-center gap-1 self-start rounded-full bg-surface-2 p-1 text-xs font-semibold">
+          {(['form', 'text'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => changeEntry(v)}
+              className={`min-h-8 rounded-full px-3 ${entry === v ? 'bg-accent text-accent-ink' : 'text-muted'}`}
+              aria-pressed={entry === v}
+            >
+              {v === 'form' ? 'Rápido' : 'Texto'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {routine && entry === 'form' && analysis && exercises && (
+        <QuickForm
+          key={`${routine.id}-${date}-${done ?? ''}`}
+          routine={routine}
+          exercises={exercises}
+          analysis={analysis}
+          date={fromInputDate(date)}
+          onSaved={(r) => setDone(describe(r))}
+        />
+      )}
+
+      {routine && entry === 'form' && done && (
+        <button type="button" onClick={() => navigate('/historico')} className="self-start text-sm font-medium text-good">
+          {done} Ver histórico ›
+        </button>
+      )}
+
+      {(!routine || entry === 'text') && (
+      <>
       {(routine || effectiveMode?.kind === 'run') && !text && (
         <button
           type="button"
@@ -274,6 +331,9 @@ export function QuickNote() {
           </button>
         )}
       </div>
+
+      </>
+      )}
 
       <details className="text-sm text-muted">
         <summary className="cursor-pointer font-medium">Como escrever</summary>

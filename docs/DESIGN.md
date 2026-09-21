@@ -120,6 +120,8 @@ Seis seções: **Evolução · Anotar · Histórico · Treinos · Exercícios ·
 
 ### 2. Anotar (foco no celular)
 - Chips de modo: Treino A / B / C (o sugerido vem marcado), Corrida, Livre. Vem de `?treino=` quando chega pelo botão do painel.
+- **Rápido** (padrão quando há treino escolhido): uma linha por exercício com a carga da última vez já preenchida (ou a sugerida, se marcou aumentar) e um campo de reps por série alvo (2 no programa atual). A decisão vem sugerida pela faixa: todas as séries no topo da faixa → aumentar; alguma abaixo do mínimo → diminuir; senão manter. Um toque troca. "Pular" tira o exercício da sessão; sem reps também fica de fora. Item com alternativa tem um seletor para trocar o exercício.
+- **Texto**: o modo original, abaixo. Segue sendo o caminho para colar histórico e para corrida.
 - **Preencher com o treino X e a última carga**: gera uma linha por exercício do treino com a última carga (ou a sugerida, se marcou aumentar) e as reps da última vez. Se da última vez foi feita a alternativa, mantém a alternativa. Você só edita os números.
 - Caixa de texto com o formato do WhatsApp, rascunho salvo automaticamente, seletor de dia.
 - Abaixo, "o que entendi": cada linha com nome, peso, reps, decisão, avisos e o alvo da rotina. Reps fora da faixa ficam em amarelo. Nomes desconhecidos ganham o selo "novo".
