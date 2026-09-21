@@ -1,0 +1,272 @@
+<title>Ferro</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#141619;--surface:#1E2126;--surface-2:#282C33;--line:#343941;
+  --text:#ECEEF1;--muted:#8B929C;--accent:#FF7A1A;--accent-ink:#1A0D00;
+  --accent-soft:rgba(255,122,26,.14);--good:#4CC38A;--warn:#F2C94C;
+  --page:#0E1013;--page-text:#ECEEF1;--page-muted:#8B929C;--page-line:#262A30;
+  --display:"Archivo",system-ui,sans-serif;--body:"Public Sans",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --page:#F5F6F8;--page-text:#15181C;--page-muted:#5F6772;--page-line:#D9DDE3;
+  }
+}
+:root[data-theme="light"]{
+  --page:#F5F6F8;--page-text:#15181C;--page-muted:#5F6772;--page-line:#D9DDE3;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--page-text);font-family:var(--body);padding-block:32px;padding-inline:16px}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-family:var(--display);font-weight:800;font-size:40px;margin:0 0 8px;letter-spacing:-.02em}
+.lead{color:var(--page-muted);max-width:60ch;margin:0 0 28px;font-size:16px;line-height:1.5}
+h2{font-family:var(--display);font-weight:700;font-size:20px;margin:40px 0 14px}
+.eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--page-muted);font-weight:600}
+.tokens{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.tok{border:1px solid var(--page-line);border-radius:12px;overflow:hidden}
+.tok .sw{height:56px}
+.tok .nm{padding:8px 10px;font-size:12px;color:var(--page-muted);display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+.tok .nm b{color:var(--page-text);font-weight:600}
+.type{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.type .box{border:1px solid var(--page-line);border-radius:12px;padding:18px}
+.type .box .s{font-size:12px;color:var(--page-muted);margin-top:8px}
+.screens{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:28px 20px;align-items:start}
+.screen .cap{margin:12px 2px 0;font-size:14px;color:var(--page-muted);line-height:1.5}
+.screen .cap b{color:var(--page-text);font-weight:600;display:block;font-family:var(--display);font-size:15px;margin-bottom:2px}
+
+/* phone */
+.phone{width:100%;max-width:340px;margin:0 auto;aspect-ratio:9/19;background:var(--bg);color:var(--text);border-radius:36px;border:6px solid #2A2E35;overflow:hidden;display:flex;flex-direction:column;position:relative;font-size:14px}
+.phone.light{--bg:#EEF0F3;--surface:#FFFFFF;--surface-2:#E3E6EB;--line:#D2D6DD;--text:#15181C;--muted:#5F6772;--accent:#E2620A;--accent-ink:#FFFFFF;--accent-soft:rgba(226,98,10,.12);--good:#1F8F5B;--warn:#B08600}
+.status{display:flex;justify-content:space-between;padding:12px 22px 0;font-size:12px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.body{flex:1;overflow:hidden;padding:12px 16px 0;display:flex;flex-direction:column;gap:14px}
+.nav{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);padding:10px 8px 18px;background:var(--bg)}
+.nav div{text-align:center;font-size:11px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px}
+.nav div.on{color:var(--accent)}
+.nav svg{width:22px;height:22px}
+.card{background:var(--surface);border-radius:12px;padding:14px}
+.lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.h{font-family:var(--display);font-weight:800;letter-spacing:-.01em}
+.num{font-family:var(--display);font-weight:700;font-variant-numeric:tabular-nums}
+.btn{background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:16px;text-align:center;font-weight:600;font-size:16px;font-family:var(--body)}
+.chip{display:inline-block;background:var(--surface-2);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:500;color:var(--text)}
+.chip.on{background:var(--accent);color:var(--accent-ink)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.dots{display:flex;gap:6px}
+.dots span{width:26px;height:26px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;font-size:11px;color:var(--muted);font-weight:600}
+.dots span.on{background:var(--accent);color:var(--accent-ink)}
+.dots span.today{outline:2px solid var(--accent);outline-offset:2px}
+/* set table */
+.sets{display:grid;grid-template-columns:22px 1fr 58px 50px 34px;gap:8px;align-items:center;font-variant-numeric:tabular-nums}
+.sets .hd{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.sets .cell{background:var(--surface-2);border-radius:10px;padding:9px 6px;text-align:center;font-family:var(--display);font-weight:700;font-size:15px}
+.sets .cell.done{background:var(--accent-soft)}
+.sets .cell.focus{outline:2px solid var(--accent)}
+.sets .cell.dim{color:var(--muted)}
+.sets .prev{font-size:12px;color:var(--muted)}
+.sets .n{color:var(--muted);font-size:12px;font-weight:600;text-align:center}
+.sets .ck{width:34px;height:34px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;color:var(--muted)}
+.sets .ck.done{background:var(--accent);color:var(--accent-ink)}
+.sets svg{width:18px;height:18px}
+.rest{position:absolute;left:12px;right:12px;bottom:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rest .bar{position:absolute;left:14px;right:14px;bottom:6px;height:3px;border-radius:2px;background:var(--line);overflow:hidden}
+.rest .bar i{display:block;height:100%;width:62%;background:var(--accent)}
+.list{display:flex;flex-direction:column;gap:10px}
+.hist{background:var(--surface);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:46px 1fr auto;gap:12px;align-items:center}
+.hist .d{text-align:center;line-height:1}
+.hist .d .dd{font-family:var(--display);font-weight:800;font-size:22px}
+.hist .d .mm{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-top:2px}
+.hist .meta{font-size:12px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+.pr{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:3px 8px;font-size:11px;font-weight:700}
+.stat{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat .card{padding:12px}
+.stat .v{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:2px}
+.stat .v small{font-size:13px;color:var(--muted);font-weight:600;margin-left:2px}
+.delta{color:var(--good);font-size:12px;font-weight:600}
+.ex{background:var(--surface);border-radius:12px;padding:12px 14px}
+.ex .meta{font-size:12px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+.rules{color:var(--page-muted);line-height:1.7;max-width:70ch;padding-left:20px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Design · v0.1 · setembro 2026</p>
+  <h1>Ferro</h1>
+  <p class="lead">Registro de treino para usar com uma mão, entre uma série e outra. Tema escuro é o principal. Um único acento, laranja de metal forjado, para a ação primária, séries concluídas e recordes.</p>
+
+  <h2>Cores</h2>
+  <div class="tokens">
+    <div class="tok"><div class="sw" style="background:#141619"></div><div class="nm"><b>bg</b>#141619</div></div>
+    <div class="tok"><div class="sw" style="background:#1E2126"></div><div class="nm"><b>surface</b>#1E2126</div></div>
+    <div class="tok"><div class="sw" style="background:#282C33"></div><div class="nm"><b>surface-2</b>#282C33</div></div>
+    <div class="tok"><div class="sw" style="background:#ECEEF1"></div><div class="nm"><b>text</b>#ECEEF1</div></div>
+    <div class="tok"><div class="sw" style="background:#8B929C"></div><div class="nm"><b>muted</b>#8B929C</div></div>
+    <div class="tok"><div class="sw" style="background:#FF7A1A"></div><div class="nm"><b>accent</b>#FF7A1A</div></div>
+    <div class="tok"><div class="sw" style="background:#4CC38A"></div><div class="nm"><b>good</b>#4CC38A</div></div>
+    <div class="tok"><div class="sw" style="background:#F2C94C"></div><div class="nm"><b>warn</b>#F2C94C</div></div>
+  </div>
+
+  <h2>Tipografia</h2>
+  <div class="type">
+    <div class="box">
+      <div style="font-family:var(--display);font-weight:800;font-size:40px;letter-spacing:-.02em;font-variant-numeric:tabular-nums">82,5 <span style="font-size:20px;color:var(--page-muted)">kg</span></div>
+      <div class="s"><b>Archivo 800</b> · títulos e números grandes, sempre tabulares</div>
+    </div>
+    <div class="box">
+      <div style="font-size:16px;line-height:1.5">Supino reto com barra. Última vez: 80 kg × 8, 8, 7. Sugestão de hoje: 82,5 kg.</div>
+      <div class="s"><b>Public Sans 400 a 600</b> · texto, rótulos e botões</div>
+    </div>
+    <div class="box">
+      <div class="eyebrow" style="color:var(--page-text)">Anterior · kg · reps</div>
+      <div class="s"><b>Rótulo</b> · 11 a 12 px, caixa alta, espaçamento 0,06 em</div>
+    </div>
+  </div>
+
+  <h2>Telas do MVP</h2>
+  <div class="screens">
+
+    <!-- 1. Início -->
+    <div class="screen">
+      <div class="phone">
+        <div class="status"><span>09:41</span><span>100%</span></div>
+        <div class="body">
+          <div>
+            <div class="lbl">Segunda, 21 set</div>
+            <div class="h" style="font-size:28px;margin-top:2px">Bora, Felipe</div>
+          </div>
+          <div class="card">
+            <div class="row" style="margin-bottom:10px"><span class="lbl">Esta semana</span><span class="lbl">3 de 4</span></div>
+            <div class="dots"><span class="on">S</span><span>T</span><span class="on">Q</span><span>Q</span><span class="on">S</span><span>S</span><span class="today">D</span></div>
+          </div>
+          <div class="btn">Iniciar treino B · Costas e bíceps</div>
+          <div class="row" style="gap:8px;justify-content:flex-start"><span class="chip">Treino A</span><span class="chip on">Treino B</span><span class="chip">Treino C</span><span class="chip">Livre</span></div>
+          <div>
+            <div class="lbl" style="margin-bottom:8px">Último treino</div>
+            <div class="hist">
+              <div class="d"><div class="dd">19</div><div class="mm">set</div></div>
+              <div><div style="font-weight:600">Treino A · Peito e tríceps</div><div class="meta">58 min · 6.240 kg · 5 exercícios</div></div>
+              <span class="pr">1 PR</span>
+            </div>
+          </div>
+        </div>
+        <div class="nav">
+          <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z"/></svg>Início</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Histórico</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9v6M18 9v6M3 11v2M21 11v2M6 12h12"/></svg>Exercícios</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg>Ajustes</div>
+        </div>
+      </div>
+      <p class="cap"><b>1 · Início</b>Um botão grande já apontando o próximo treino da sequência. A semana em sete pontos mostra constância sem precisar de gráfico.</p>
+    </div>
+
+    <!-- 2. Treino em andamento -->
+    <div class="screen">
+      <div class="phone">
+        <div class="status"><span>10:12</span><span>97%</span></div>
+        <div class="body">
+          <div class="row">
+            <div><div class="lbl">Treino B · Costas e bíceps</div><div class="num" style="font-size:28px;margin-top:2px">31:04</div></div>
+            <span class="chip on" style="padding:9px 14px;font-size:13px">Concluir</span>
+          </div>
+          <div class="card">
+            <div class="row" style="margin-bottom:10px">
+              <div><div style="font-weight:600;font-size:15px">Remada curvada</div><div style="font-size:12px;color:var(--muted)">Barra · 4 × 6 a 8</div></div>
+              <span class="delta">+2,5 kg vs. 14 set</span>
+            </div>
+            <div class="sets">
+              <div class="hd">#</div><div class="hd">Anterior</div><div class="hd" style="text-align:center">kg</div><div class="hd" style="text-align:center">Reps</div><div></div>
+              <div class="n">1</div><div class="prev">70 × 8</div><div class="cell done">72,5</div><div class="cell done">8</div><div class="ck done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div>
+              <div class="n">2</div><div class="prev">70 × 8</div><div class="cell done">72,5</div><div class="cell done">8</div><div class="ck done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div>
+              <div class="n">3</div><div class="prev">70 × 7</div><div class="cell focus">72,5</div><div class="cell">7</div><div class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div>
+              <div class="n">4</div><div class="prev">70 × 6</div><div class="cell dim">72,5</div><div class="cell dim">6</div><div class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div>
+            </div>
+            <div class="row" style="margin-top:12px;gap:8px;justify-content:flex-start"><span class="chip">+ série</span><span class="chip">Anotação</span><span class="chip">Trocar</span></div>
+          </div>
+          <div class="card" style="opacity:.75">
+            <div class="row"><div><div style="font-weight:600;font-size:15px">Puxada alta</div><div style="font-size:12px;color:var(--muted)">Máquina · 3 × 10 a 12 · última: 60 kg</div></div><span style="color:var(--muted)">›</span></div>
+          </div>
+        </div>
+        <div class="rest">
+          <div><div class="lbl">Descanso</div><div class="num" style="font-size:24px">1:12</div></div>
+          <div style="display:flex;gap:8px"><span class="chip">+30 s</span><span class="chip">Pular</span></div>
+          <div class="bar"><i></i></div>
+        </div>
+      </div>
+      <p class="cap"><b>2 · Treino em andamento</b>A tela que importa. Coluna "Anterior" ao lado do que você está fazendo hoje. Série concluída fica laranja e dispara o descanso no rodapé.</p>
+    </div>
+
+    <!-- 3. Histórico -->
+    <div class="screen">
+      <div class="phone">
+        <div class="status"><span>09:41</span><span>100%</span></div>
+        <div class="body">
+          <div class="h" style="font-size:28px">Histórico</div>
+          <div class="stat">
+            <div class="card"><div class="lbl">Setembro</div><div class="v">11 <small>treinos</small></div></div>
+            <div class="card"><div class="lbl">Volume</div><div class="v">64,2 <small>t</small></div></div>
+          </div>
+          <div class="list">
+            <div class="hist"><div class="d"><div class="dd">19</div><div class="mm">set</div></div><div><div style="font-weight:600">Treino A · Peito e tríceps</div><div class="meta">58 min · 6.240 kg</div></div><span class="pr">1 PR</span></div>
+            <div class="hist"><div class="d"><div class="dd">17</div><div class="mm">set</div></div><div><div style="font-weight:600">Treino C · Pernas</div><div class="meta">64 min · 9.870 kg</div></div><span></span></div>
+            <div class="hist"><div class="d"><div class="dd">14</div><div class="mm">set</div></div><div><div style="font-weight:600">Treino B · Costas e bíceps</div><div class="meta">52 min · 5.980 kg</div></div><span class="pr">2 PR</span></div>
+            <div class="hist"><div class="d"><div class="dd">12</div><div class="mm">set</div></div><div><div style="font-weight:600">Treino A · Peito e tríceps</div><div class="meta">55 min · 6.010 kg</div></div><span></span></div>
+            <div class="hist"><div class="d"><div class="dd">10</div><div class="mm">set</div></div><div><div style="font-weight:600">Treino C · Pernas</div><div class="meta">61 min · 9.420 kg</div></div><span></span></div>
+          </div>
+        </div>
+        <div class="nav">
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z"/></svg>Início</div>
+          <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Histórico</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9v6M18 9v6M3 11v2M21 11v2M6 12h12"/></svg>Exercícios</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg>Ajustes</div>
+        </div>
+      </div>
+      <p class="cap"><b>3 · Histórico</b>Um card por sessão com o que muda de um treino para outro: duração, volume e recordes. Toque abre a sessão para editar.</p>
+    </div>
+
+    <!-- 4. Exercício / progresso (tema claro) -->
+    <div class="screen">
+      <div class="phone light">
+        <div class="status"><span>09:41</span><span>100%</span></div>
+        <div class="body">
+          <div><div class="lbl">‹ Exercícios · Peito</div><div class="h" style="font-size:24px;margin-top:2px">Supino reto</div></div>
+          <div class="stat">
+            <div class="card"><div class="lbl">PR de carga</div><div class="v">82,5 <small>kg</small></div><div class="delta">19 set · +2,5</div></div>
+            <div class="card"><div class="lbl">1RM estimado</div><div class="v">99 <small>kg</small></div><div style="font-size:12px;color:var(--muted)">Epley · 82,5 × 6</div></div>
+          </div>
+          <div class="card">
+            <div class="row" style="margin-bottom:6px"><span class="lbl">Carga máx. por sessão</span><span class="lbl">12 semanas</span></div>
+            <svg viewBox="0 0 300 130" width="100%" style="display:block" role="img" aria-label="Carga máxima por sessão, de 70 a 82,5 kg">
+              <g stroke="var(--line)" stroke-width="1">
+                <line x1="32" y1="14" x2="296" y2="14"/><line x1="32" y1="52" x2="296" y2="52"/><line x1="32" y1="90" x2="296" y2="90"/>
+              </g>
+              <g fill="var(--muted)" font-size="10" font-family="Public Sans, sans-serif" text-anchor="end">
+                <text x="26" y="17">85</text><text x="26" y="55">77,5</text><text x="26" y="93">70</text>
+              </g>
+              <g fill="var(--muted)" font-size="10" font-family="Public Sans, sans-serif" text-anchor="middle">
+                <text x="40" y="122">jul</text><text x="168" y="122">ago</text><text x="288" y="122">set</text>
+              </g>
+              <path d="M40 90 L64 90 L88 77.7 L112 77.7 L136 77.7 L160 65.3 L184 65.3 L208 65.3 L232 52 L256 52 L280 39.7 L288 26.3 L288 108 L40 108 Z" fill="var(--accent)" opacity=".12"/>
+              <polyline points="40,90 64,90 88,77.7 112,77.7 136,77.7 160,65.3 184,65.3 208,65.3 232,52 256,52 280,39.7 288,26.3" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+              <circle cx="288" cy="26.3" r="4.5" fill="var(--accent)"/>
+            </svg>
+          </div>
+          <div class="list">
+            <div class="ex"><div class="row"><span style="font-weight:600">19 set</span><span class="num" style="font-size:14px">82,5 × 6 · 6 · 5</span></div><div class="meta">Banco no furo 3 · pegada média</div></div>
+            <div class="ex"><div class="row"><span style="font-weight:600">12 set</span><span class="num" style="font-size:14px">80 × 8 · 8 · 7</span></div></div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>4 · Exercício e progresso (fase 3, tema claro)</b>Recordes em cima, gráfico de carga máxima por sessão, e as anotações fixas do exercício, tipo altura do banco, que a gente sempre esquece.</p>
+    </div>
+
+  </div>
+
+  <h2>Regras de interação</h2>
+  <ul class="rules">
+    <li>Nova série já vem preenchida com os valores da série anterior. Um toque no check conclui.</li>
+    <li>Toque no campo de kg abre teclado numérico com botões rápidos de +2,5 e −2,5.</li>
+    <li>Concluir a última série de um exercício rola automaticamente para o próximo.</li>
+    <li>Recorde batido: a linha da série pulsa uma vez em laranja e um selo "PR" aparece no card. Sem confete.</li>
+    <li>Tudo com alvo de toque mínimo de 48 px. Nenhuma ação destrutiva sem desfazer.</li>
+  </ul>
+</div>
