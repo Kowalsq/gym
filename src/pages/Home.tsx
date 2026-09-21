@@ -9,6 +9,7 @@ import { db, getSetting, type WeekPlan } from '../db/schema'
 import { RANGES, analyze, dayKey, rangeStartFor, suggestNext, type RangeKey } from '../lib/analysis'
 import { fmtDayMonth, fmtKg, fmtKm } from '../lib/format'
 import { WEEKDAY_SHORT, slotLabel, suggestRoutine, weekStart } from '../lib/plan'
+import { skipStreaks } from '../lib/skips'
 
 const COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)']
 const DAY = 24 * 60 * 60 * 1000
@@ -70,6 +71,11 @@ export function Home() {
 
   const suggestion = useMemo(() => (routines && sessions ? suggestRoutine(plan, routines, sessions, now) : null), [plan, routines, sessions, now])
   const toIncrease = summaries.filter((s) => s.current?.decision === 'aumentar').length
+  const skips = useMemo(
+    () => (routines && sessions && sets && exercises ? skipStreaks(routines, sessions, sets, exercises) : []),
+    [routines, sessions, sets, exercises],
+  )
+  const skipFor = (routineId: string, exerciseId: string) => skips.find((k) => k.routine.id === routineId && k.exercise.id === exerciseId)
 
   // Semana corrente: plano, feito, hoje.
   const ws = weekStart(now)
@@ -172,6 +178,28 @@ export function Home() {
         </div>
       </section>
 
+      {skips.length > 0 && (
+        <section className="card flex flex-col gap-2 border border-warn/30">
+          <div className="flex items-center gap-2">
+            <span className="grid size-5 place-items-center rounded-full bg-warn/15 text-[11px] font-bold text-warn" aria-hidden>!</span>
+            <span className="label">Sendo pulados</span>
+          </div>
+          <ul className="flex flex-col gap-1 text-sm">
+            {skips.map((k) => (
+              <li key={`${k.routine.id}-${k.exercise.id}`} className="flex flex-wrap items-baseline justify-between gap-x-3">
+                <Link to={`/exercicios/${k.exercise.id}`} className="font-medium hover:text-accent">
+                  {k.exercise.name}
+                </Link>
+                <span className="text-xs text-muted">
+                  não feito nos últimos {k.streak} treinos {k.routine.name}
+                  {k.lastDoneAt ? ` · última vez ${fmtDayMonth(k.lastDoneAt)}` : ' · nunca feito'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <Link to="/anotar" className="tap flex items-center justify-center gap-2 rounded-full bg-accent px-6 font-semibold text-accent-ink lg:hidden">
         <IconPlus /> Anotar {suggestion ? `treino ${suggestion.routine.name}` : 'treino de hoje'}
       </Link>
@@ -239,8 +267,8 @@ export function Home() {
             </p>
           ) : (
             <>
-              <div className="flex items-baseline gap-2">
-                <span className="font-display text-[32px] font-extrabold leading-none tracking-tight">Treino {suggestion.routine.name}</span>
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="font-display text-[32px] font-extrabold leading-none tracking-tight whitespace-nowrap">Treino {suggestion.routine.name}</span>
                 {suggestion.routine.description && <span className="text-xs text-muted">{suggestion.routine.description}</span>}
               </div>
               <ul className="flex flex-col divide-y divide-line">
@@ -265,6 +293,10 @@ export function Home() {
                           {it.targetSets}×{it.targetRepsMin}–{it.targetRepsMax}
                           {it.rirMin !== undefined ? ` · RIR ${it.rirMin}–${it.rirMax ?? it.rirMin}` : ''}
                           {cur ? ` · última ${fmtDayMonth(cur.date)}: ${cur.reps.join(' · ')}` : ' · nunca feito'}
+                          {(() => {
+                            const k = skipFor(suggestion.routine.id, it.exerciseId)
+                            return k ? <span className="ml-1 font-semibold text-warn">· pulado {k.streak}×</span> : null
+                          })()}
                         </div>
                       </div>
                       <div className="num shrink-0 text-right text-sm">
