@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
+import type { Decision } from '../lib/parse'
 
 export type MuscleGroup =
   | 'peito'
@@ -61,11 +62,23 @@ export interface SetEntry {
   doneAt: number
 }
 
+/** Um registro por exercício por sessão: a decisão para o próximo treino e anotação. */
+export interface ExerciseLog {
+  id: string
+  sessionId: string
+  exerciseId: string
+  decision: Decision | null
+  note?: string
+  /** Texto original digitado, quando veio da anotação rápida. */
+  raw?: string
+}
+
 export class FerroDB extends Dexie {
   exercises!: EntityTable<Exercise, 'id'>
   routines!: EntityTable<Routine, 'id'>
   sessions!: EntityTable<Session, 'id'>
   sets!: EntityTable<SetEntry, 'id'>
+  logs!: EntityTable<ExerciseLog, 'id'>
 
   constructor() {
     super('ferro')
@@ -74,6 +87,9 @@ export class FerroDB extends Dexie {
       routines: 'id, order',
       sessions: 'id, startedAt, endedAt',
       sets: 'id, sessionId, [exerciseId+doneAt], [sessionId+exerciseId]',
+    })
+    this.version(2).stores({
+      logs: 'id, sessionId, exerciseId, [sessionId+exerciseId]',
     })
   }
 }
