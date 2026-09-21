@@ -19,7 +19,7 @@ Publicado no GitHub Pages em **https://kowalsq.github.io/gym/**. Todo push na `m
 
 No celular, abra o endereço no Chrome e use *Adicionar à tela inicial*. O app funciona offline depois do primeiro acesso.
 
-Os dados ficam no aparelho: celular e PC têm bancos separados. Para levar do celular ao PC, use *Ajustes → Exportar backup* e importe no outro.
+Os dados ficam no aparelho. Para celular e PC verem a mesma coisa, ligue a sincronização em *Ajustes*: gere um token clássico do GitHub só com o escopo `gist` (o link está na tela) e cole nos dois aparelhos. O app guarda tudo num Gist privado da sua conta e sincroniza sozinho.
 
 ## Comandos
 
@@ -43,4 +43,5 @@ src/
   lib/       regras puras (métricas, formatação) e testes
   components/ shell (abas no celular, barra lateral no PC), gráfico, heatmap, ícones
   pages/     uma tela por arquivo (Home é o painel de evolução, QuickNote é o Anotar)
+  sync/      snapshot, mesclagem (testada) e cliente do Gist
 ```

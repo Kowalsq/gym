@@ -5,6 +5,7 @@ import { Decision } from '../components/Decision'
 import { Heatmap } from '../components/Heatmap'
 import { LineChart, type ChartSeries } from '../components/LineChart'
 import { IconPlus } from '../components/Icons'
+import { SyncBadge } from '../components/SyncBadge'
 import { db, getSetting, type WeekPlan } from '../db/schema'
 import { RANGES, analyze, dayKey, rangeStartFor, suggestNext, type RangeKey } from '../lib/analysis'
 import { fmtDayMonth, fmtKg, fmtKm } from '../lib/format'
@@ -123,6 +124,7 @@ export function Home() {
         <div>
           <h1 className="font-display text-[28px] font-extrabold tracking-tight lg:text-[32px]">Evolução</h1>
           <p className="text-sm text-muted">Carga por exercício, o próximo treino e a semana.</p>
+          <SyncBadge className="mt-1 lg:hidden" />
         </div>
         <div className="flex gap-1.5">
           {RANGES.map((r) => (

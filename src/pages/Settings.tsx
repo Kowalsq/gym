@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { db } from '../db/schema'
 import { formatLine } from '../lib/parse'
 import { applyTheme, readTheme, saveTheme, type Theme } from '../lib/theme'
+import { applySnapshot, connect, disconnect, exportSnapshot, syncNow, useSyncStatus } from '../sync/sync'
 
 function download(name: string, content: string, type: string) {
   const blob = new Blob([content], { type })
@@ -13,6 +14,8 @@ function download(name: string, content: string, type: string) {
   URL.revokeObjectURL(url)
 }
 
+const TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=Ferro%20sync'
+
 export function Settings() {
   const [theme, setTheme] = useState<Theme>(readTheme)
   const [msg, setMsg] = useState('')
@@ -23,18 +26,8 @@ export function Settings() {
   }, [theme])
 
   async function onExport() {
-    const data = {
-      app: 'ferro',
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      exercises: await db.exercises.toArray(),
-      routines: await db.routines.toArray(),
-      sessions: await db.sessions.toArray(),
-      sets: await db.sets.toArray(),
-      logs: await db.logs.toArray(),
-      settings: await db.settings.toArray(),
-    }
-    download(`ferro-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2), 'application/json')
+    const snap = await exportSnapshot()
+    download(`ferro-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(snap, null, 2), 'application/json')
     setMsg('Backup exportado.')
   }
 
@@ -69,16 +62,9 @@ export function Settings() {
     try {
       const data = JSON.parse(await file.text())
       if (data.app !== 'ferro') throw new Error('Arquivo não é um backup do Ferro.')
-      if (!confirm('Importar vai substituir todos os dados atuais. Continuar?')) return
-      await db.transaction('rw', [db.exercises, db.routines, db.sessions, db.sets, db.logs, db.settings], async () => {
-        await Promise.all([db.exercises.clear(), db.routines.clear(), db.sessions.clear(), db.sets.clear(), db.logs.clear(), db.settings.clear()])
-        await db.exercises.bulkAdd(data.exercises ?? [])
-        await db.routines.bulkAdd(data.routines ?? [])
-        await db.sessions.bulkAdd(data.sessions ?? [])
-        await db.sets.bulkAdd(data.sets ?? [])
-        await db.logs.bulkAdd(data.logs ?? [])
-        await db.settings.bulkAdd(data.settings ?? [])
-      })
+      if (!confirm('Importar vai substituir todos os dados atuais neste aparelho e no Gist. Continuar?')) return
+      await applySnapshot(data)
+      await syncNow({ replaceRemote: true })
       setMsg('Backup importado.')
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'Não foi possível importar.')
@@ -88,6 +74,8 @@ export function Settings() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <h1 className="font-display text-[28px] font-extrabold tracking-tight">Ajustes</h1>
+
+      <SyncSection />
 
       <section className="card flex flex-col gap-3">
         <div className="label">Tema</div>
@@ -107,7 +95,7 @@ export function Settings() {
 
       <section className="card flex flex-col gap-3">
         <div className="label">Dados</div>
-        <p className="text-sm text-muted">Tudo fica só neste aparelho. Exporte um backup de vez em quando.</p>
+        <p className="text-sm text-muted">Backup manual, para guardar ou levar para outro lugar.</p>
         <button type="button" onClick={onExport} className="tap rounded-full bg-surface-2 font-semibold">
           Exportar backup (JSON)
         </button>
@@ -131,7 +119,94 @@ export function Settings() {
         {msg && <p className="text-sm text-good">{msg}</p>}
       </section>
 
-      <p className="text-center text-xs text-muted">Ferro · v0.1</p>
+      <p className="text-center text-xs text-muted">Ferro · v0.2</p>
     </div>
+  )
+}
+
+function SyncSection() {
+  const s = useSyncStatus()
+  const [token, setToken] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  async function onConnect() {
+    setBusy(true)
+    setErr('')
+    try {
+      await connect(token)
+      setToken('')
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Não foi possível conectar.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="card flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <div className="label">Sincronização entre aparelhos</div>
+        {s.login && <span className="text-xs text-muted">@{s.login}</span>}
+      </div>
+
+      {s.state === 'off' ? (
+        <>
+          <p className="text-sm text-muted">
+            Os dados ficam num Gist privado da sua conta do GitHub. Cole o mesmo token aqui e no outro aparelho e os dois passam a ver a mesma
+            coisa. Só precisa da permissão <span className="num">gist</span>.
+          </p>
+          <a href={TOKEN_URL} target="_blank" rel="noreferrer" className="text-sm font-semibold text-accent">
+            Gerar token no GitHub ›
+          </a>
+          <div className="flex gap-2">
+            <input
+              id="gh-token"
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="ghp_…"
+              autoComplete="off"
+              className="field h-12 flex-1 px-3"
+              aria-label="Token do GitHub"
+            />
+            <button
+              type="button"
+              onClick={onConnect}
+              disabled={busy || !token.trim()}
+              className="tap rounded-full bg-accent px-5 font-semibold text-accent-ink disabled:opacity-45"
+            >
+              {busy ? 'Conectando…' : 'Conectar'}
+            </button>
+          </div>
+          {err && <p className="text-sm text-warn">{err}</p>}
+        </>
+      ) : (
+        <>
+          <p className="text-sm">
+            {s.state === 'syncing' && 'Sincronizando…'}
+            {s.state === 'idle' && `Sincronizado${s.lastSyncAt ? ` · ${new Date(s.lastSyncAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}.`}
+            {(s.state === 'offline' || s.state === 'error') && <span className="text-warn">{s.error}</span>}
+          </p>
+          <p className="text-xs text-muted">
+            Sincroniza sozinho ao abrir, ao voltar para o app e alguns segundos depois de cada treino salvo. No outro aparelho, cole o mesmo token.
+          </p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => syncNow()} disabled={s.state === 'syncing'} className="tap flex-1 rounded-full bg-surface-2 font-semibold disabled:opacity-45">
+              Sincronizar agora
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm('Desconectar deste aparelho? Os dados locais continuam; só param de sincronizar.')) disconnect()
+              }}
+              className="tap rounded-full bg-surface-2 px-5 text-sm font-semibold text-muted"
+            >
+              Desconectar
+            </button>
+          </div>
+        </>
+      )}
+    </section>
   )
 }

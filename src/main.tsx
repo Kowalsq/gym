@@ -8,11 +8,13 @@ import { seedProgramIfMissing } from './db/seed'
 import './index.css'
 import { parseNotes } from './lib/parse'
 import { applyTheme, readTheme } from './lib/theme'
+import { applySnapshot, exportSnapshot, startSyncEngine, syncNow } from './sync/sync'
+import { mergeSnapshots } from './sync/merge'
 
 applyTheme(readTheme())
 
 // Exercícios, rotinas A/B/C e plano semanal; não bloqueia a primeira renderização.
-void seedProgramIfMissing()
+void seedProgramIfMissing().then(() => startSyncEngine())
 
 if (import.meta.env.DEV) {
   // Atalhos para testes manuais no console e capturas automatizadas.
@@ -21,6 +23,7 @@ if (import.meta.env.DEV) {
       db,
       importText: async (text: string, defaultDate = Date.now()) =>
         saveParsedDays(parseNotes(text, defaultDate), await db.exercises.toArray()),
+      sync: { exportSnapshot, applySnapshot, mergeSnapshots, syncNow },
     },
   })
 }

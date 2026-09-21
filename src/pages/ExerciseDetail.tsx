@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { Decision } from '../components/Decision'
 import { IconBack } from '../components/Icons'
 import { LineChart } from '../components/LineChart'
+import { deleteExercise } from '../db/queries'
 import { db, type Equipment } from '../db/schema'
 import { analyze } from '../lib/analysis'
 import { EQUIPMENT_LABEL, fmtDayMonth, fmtKg, muscleLabel } from '../lib/format'
@@ -39,7 +40,7 @@ export function ExerciseDetail() {
       return
     }
     if (!confirm(`Apagar ${exercise!.name}?`)) return
-    await db.exercises.delete(id)
+    await deleteExercise(id)
     navigate('/exercicios')
   }
 

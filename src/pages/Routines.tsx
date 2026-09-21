@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { IconPlus, IconTrash } from '../components/Icons'
+import { deleteRoutine } from '../db/queries'
 import { db, getSetting, newId, setSetting, type Exercise, type PlanSlot, type Routine, type RoutineItem, type WeekPlan } from '../db/schema'
 import { muscleLabel } from '../lib/format'
 import { WEEKDAY_LONG, WEEKDAY_SHORT, emptyPlan } from '../lib/plan'
@@ -145,7 +146,7 @@ function RoutineCard({
   }
   async function remove() {
     if (!confirm(`Apagar o treino ${routine.name}? O histórico continua.`)) return
-    await db.routines.delete(routine.id)
+    await deleteRoutine(routine.id)
   }
 
   const sorted = [...exercises].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))

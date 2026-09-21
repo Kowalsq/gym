@@ -1,4 +1,4 @@
-import { db, newId, type Session, type SetEntry } from './schema'
+import { db, markDeleted, newId, touchSession, type Session, type SetEntry } from './schema'
 
 /** Sessão em andamento (sem endedAt), se houver. */
 export function activeSession(): Promise<Session | undefined> {
@@ -8,6 +8,7 @@ export function activeSession(): Promise<Session | undefined> {
 export async function startSession(name: string, routineId?: string): Promise<Session> {
   const session: Session = {
     id: newId(),
+    kind: 'gym',
     name,
     routineId,
     startedAt: Date.now(),
@@ -21,17 +22,32 @@ export async function finishSession(sessionId: string): Promise<void> {
   const setCount = await db.sets.where('sessionId').equals(sessionId).count()
   if (setCount === 0) {
     // Treino sem nenhuma série não vale registro.
-    await db.sessions.delete(sessionId)
+    await discardSession(sessionId)
     return
   }
   await db.sessions.update(sessionId, { endedAt: Date.now() })
 }
 
 export async function discardSession(sessionId: string): Promise<void> {
-  await db.transaction('rw', db.sessions, db.sets, db.logs, async () => {
+  await db.transaction('rw', [db.sessions, db.sets, db.logs, db.tombstones], async () => {
     await db.sets.where('sessionId').equals(sessionId).delete()
     await db.logs.where('sessionId').equals(sessionId).delete()
     await db.sessions.delete(sessionId)
+    await markDeleted('sessions', sessionId)
+  })
+}
+
+export async function deleteExercise(id: string): Promise<void> {
+  await db.transaction('rw', [db.exercises, db.tombstones], async () => {
+    await db.exercises.delete(id)
+    await markDeleted('exercises', id)
+  })
+}
+
+export async function deleteRoutine(id: string): Promise<void> {
+  await db.transaction('rw', [db.routines, db.tombstones], async () => {
+    await db.routines.delete(id)
+    await markDeleted('routines', id)
   })
 }
 
@@ -54,33 +70,34 @@ export function setsOfSession(sessionId: string): Promise<SetEntry[]> {
   return db.sets.where('sessionId').equals(sessionId).sortBy('doneAt')
 }
 
-export async function addSet(
-  input: Omit<SetEntry, 'id' | 'doneAt' | 'setNumber'>,
-): Promise<SetEntry> {
-  const existing = await db.sets
-    .where('[sessionId+exerciseId]')
-    .equals([input.sessionId, input.exerciseId])
-    .count()
+export async function addSet(input: Omit<SetEntry, 'id' | 'doneAt' | 'setNumber'>): Promise<SetEntry> {
+  const existing = await db.sets.where('[sessionId+exerciseId]').equals([input.sessionId, input.exerciseId]).count()
   const entry: SetEntry = { ...input, id: newId(), setNumber: existing + 1, doneAt: Date.now() }
-  await db.sets.add(entry)
+  await db.transaction('rw', db.sets, db.sessions, async () => {
+    await db.sets.add(entry)
+    await touchSession(input.sessionId)
+  })
   return entry
 }
 
 export async function updateSet(id: string, patch: Partial<Pick<SetEntry, 'weightKg' | 'reps' | 'isWarmup'>>) {
-  await db.sets.update(id, patch)
+  const target = await db.sets.get(id)
+  if (!target) return
+  await db.transaction('rw', db.sets, db.sessions, async () => {
+    await db.sets.update(id, patch)
+    await touchSession(target.sessionId)
+  })
 }
 
 export async function deleteSet(id: string): Promise<void> {
   const target = await db.sets.get(id)
   if (!target) return
-  await db.transaction('rw', db.sets, async () => {
+  await db.transaction('rw', db.sets, db.sessions, async () => {
     await db.sets.delete(id)
     // Renumera as séries restantes do mesmo exercício na sessão.
-    const rest = await db.sets
-      .where('[sessionId+exerciseId]')
-      .equals([target.sessionId, target.exerciseId])
-      .sortBy('doneAt')
+    const rest = await db.sets.where('[sessionId+exerciseId]').equals([target.sessionId, target.exerciseId]).sortBy('doneAt')
     await Promise.all(rest.map((s, i) => db.sets.update(s.id, { setNumber: i + 1 })))
+    await touchSession(target.sessionId)
   })
 }
 
@@ -91,7 +108,7 @@ export async function deleteSet(id: string): Promise<void> {
 export async function previousSets(exerciseId: string, excludeSessionId: string): Promise<SetEntry[]> {
   const recent = await db.sets
     .where('[exerciseId+doneAt]')
-    .between([exerciseId, Dexie_MIN], [exerciseId, Dexie_MAX])
+    .between([exerciseId, -Infinity], [exerciseId, Infinity])
     .reverse()
     .filter((s) => s.sessionId !== excludeSessionId)
     .limit(30)
@@ -103,10 +120,7 @@ export async function previousSets(exerciseId: string, excludeSessionId: string)
 
 /** Todas as séries válidas de um exercício, em ordem cronológica. */
 export function allSetsOfExercise(exerciseId: string): Promise<SetEntry[]> {
-  return db.sets
-    .where('[exerciseId+doneAt]')
-    .between([exerciseId, Dexie_MIN], [exerciseId, Dexie_MAX])
-    .toArray()
+  return db.sets.where('[exerciseId+doneAt]').between([exerciseId, -Infinity], [exerciseId, Infinity]).toArray()
 }
 
 export function finishedSessions(limit = 100): Promise<Session[]> {
@@ -117,7 +131,3 @@ export function finishedSessions(limit = 100): Promise<Session[]> {
     .limit(limit)
     .toArray()
 }
-
-// Limites para consultas em índice composto [exerciseId+doneAt].
-const Dexie_MIN = -Infinity
-const Dexie_MAX = Infinity

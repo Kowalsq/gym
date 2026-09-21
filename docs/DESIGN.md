@@ -105,6 +105,17 @@ Regras derivadas, calculadas e não armazenadas:
 - **PR** de um exercício = maior `weightKg` com `reps ≥ 1`, e maior 1RM estimado. Dois recordes separados.
 - **Sugestão de progressão**: se todas as séries alvo foram cumpridas no limite superior de reps, sugerir `+2,5 kg` (barra) ou `+1 kg` (halter) na próxima sessão.
 
+## Sincronização entre aparelhos
+
+Sem servidor próprio: o banco inteiro vai em JSON para um **Gist privado** da conta do GitHub do usuário (`src/sync/`). Token clássico com escopo `gist`, colado em Ajustes nos dois aparelhos; o app acha o Gist pela descrição ou cria um.
+
+- **Quando**: ao abrir, ao voltar para o app, quando a internet volta e uns 3 s depois de qualquer gravação local (hooks do Dexie avisam).
+- **Como**: baixa o remoto, mescla com o local, aplica o resultado e envia se mudou. Nunca envia sem antes mesclar.
+- **Mesclagem** (`merge.ts`, testada): exercícios, treinos, sessões e ajustes têm `updatedAt` carimbado automaticamente; em conflito vence o mais recente, empate fica com o local. Sessão é documento: séries e logs vêm do lado cuja sessão venceu, e qualquer mudança em série sobe o carimbo da sessão. Apagamentos deixam **tombstone**, que vence registros mais antigos que ele. Exercícios e treinos com o mesmo nome em ids diferentes são unificados com remapeamento de ids (séries, logs, itens de treino, plano da semana).
+- **Primeiro aparelho** cria o Gist com o local. **Segundo aparelho** sem treinos adota o remoto inteiro, para os A/B/C recém-semeados não competirem com os já editados.
+- **Importar backup** substitui o local e sobrescreve o Gist.
+- O token fica no `localStorage` de cada aparelho, fora do snapshot.
+
 ## Telas
 
 Seis seções: **Evolução · Anotar · Histórico · Treinos · Exercícios · Ajustes**. No PC, barra lateral fixa à esquerda e conteúdo largo. No celular, abas embaixo (Exercícios fica acessível por Treinos).
@@ -139,7 +150,7 @@ Seis seções: **Evolução · Anotar · Histórico · Treinos · Exercícios ·
 - Busca, filtro por grupo muscular (as categorias do programa), cadastro com grupo livre e flag de composto. Detalhe com carga atual, recorde, 1RM estimado, gráfico e lista de sessões com decisão. Edição de nome, grupo, equipamento, composto, outros nomes aceitos e anotações fixas.
 
 ### 6. Ajustes
-- Tema, backup JSON (exportar e importar), exportação de todo o histórico no formato de texto original.
+- Sincronização (token, status, sincronizar agora, desconectar), tema, backup JSON (exportar e importar), exportação de todo o histórico no formato de texto original.
 
 ### Treino em andamento (secundário)
 - Lançamento série a série com coluna "anterior", cronômetro e aquecimento. Existe, mas o caminho principal no celular é Anotar.
@@ -148,7 +159,7 @@ Seis seções: **Evolução · Anotar · Histórico · Treinos · Exercícios ·
 
 1. **Feito**: anotar por texto, importação do WhatsApp, painel de evolução com gráfico, próximo treino, tabela, heatmap, histórico, exercícios, backup e exportação em texto, rotinas A/B/C com RIR, plano semanal, corrida, preenchimento do treino do dia.
 2. **Refino do painel**: comparar períodos (este mês vs. anterior), volume semanal por grupo muscular, meta por exercício com linha no gráfico, marcar semanas de deload e lesões para explicar quedas, gráfico de ritmo e distância das corridas.
-3. **Celular**: PWA instalada com ícones PNG, atalho direto para Anotar, sincronização entre PC e celular via arquivo ou nuvem pessoal.
+3. **Feito também**: PWA no GitHub Pages com ícones, sincronização PC ↔ celular via Gist.
 4. **Extras**: peso corporal, calculadora de anilhas, RIR anotado por série.
 
 ## Fora de escopo por agora

@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router'
 import { IconDumbbell, IconHistory, IconHome, IconList, IconPlus, IconSettings } from './Icons'
+import { SyncBadge } from './SyncBadge'
 
 const tabs = [
   { to: '/', label: 'Evolução', Icon: IconHome, mobile: true },
@@ -38,6 +39,7 @@ export function Shell() {
             </NavLink>
           ))}
         </nav>
+        <SyncBadge className="mt-auto px-3" />
       </aside>
 
       <main className="flex-1 overflow-y-auto px-4 pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-6 lg:px-10 lg:py-8">
