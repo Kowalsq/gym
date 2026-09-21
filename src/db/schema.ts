@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Decision } from '../lib/parse'
+import type { LoadUnit } from '../lib/units'
 
 /** Grupo muscular é texto livre: as categorias são as do próprio programa. */
 export type MuscleGroup = string
@@ -11,6 +12,8 @@ export interface Exercise {
   name: string
   muscleGroup: MuscleGroup
   equipment: Equipment
+  /** Unidade em que a carga é anotada. Padrão kg. */
+  loadUnit?: LoadUnit
   /** Exercício composto (multiarticular), alvo em 6–8 reps com RIR maior. */
   isCompound?: boolean
   /** Outros nomes que a anotação por texto deve reconhecer. */

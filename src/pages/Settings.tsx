@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { db } from '../db/schema'
 import { formatLine } from '../lib/parse'
+import { unitOf } from '../lib/units'
 import { applyTheme, readTheme, saveTheme, type Theme } from '../lib/theme'
 import { applySnapshot, connect, disconnect, exportSnapshot, syncNow, useSyncStatus } from '../sync/sync'
 
@@ -50,7 +51,7 @@ export function Settings() {
         const list = sets.filter((x) => x.sessionId === s.id && x.exerciseId === exId && !x.isWarmup).sort((a, b) => a.setNumber - b.setNumber)
         const ex = exById.get(exId)
         if (!ex || list.length === 0) continue
-        lines.push(formatLine(ex.name, Math.max(...list.map((x) => x.weightKg)), list.map((x) => x.reps), logByKey.get(`${s.id}|${exId}`)?.decision ?? null))
+        lines.push(formatLine(ex.name, Math.max(...list.map((x) => x.weightKg)), list.map((x) => x.reps), logByKey.get(`${s.id}|${exId}`)?.decision ?? null, unitOf(ex)))
       }
       if (lines.length > 1) blocks.push(lines.join('\n'))
     }

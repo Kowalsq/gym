@@ -8,6 +8,7 @@ import { deleteExercise } from '../db/queries'
 import { db, type Equipment } from '../db/schema'
 import { analyze } from '../lib/analysis'
 import { EQUIPMENT_LABEL, fmtDayMonth, fmtKg, muscleLabel } from '../lib/format'
+import { LOAD_UNITS, fmtLoadValue, toKg, unitLabel, unitOf, type LoadUnit } from '../lib/units'
 import { epley1RM } from '../lib/metrics'
 
 const EQUIPMENTS = Object.keys(EQUIPMENT_LABEL) as Equipment[]
@@ -31,7 +32,8 @@ export function ExerciseDetail() {
   if (!exercise || !summary) return null
   const points = summary.points
   const maxWeight = Math.max(0, ...points.map((p) => p.maxWeightKg))
-  const best1RM = Math.max(0, ...(sets ?? []).filter((s) => !s.isWarmup).map((s) => epley1RM(s.weightKg, s.reps)))
+  const unit = unitOf(exercise)
+  const best1RM = unit === 'tijolo' ? null : Math.max(0, ...(sets ?? []).filter((s) => !s.isWarmup).map((s) => epley1RM(toKg(s.weightKg, unit) ?? 0, s.reps)))
   const recent = [...points].reverse().slice(0, 12)
 
   async function onDelete() {
@@ -89,6 +91,14 @@ export function ExerciseDetail() {
             </datalist>
           </label>
           <label className="flex flex-col gap-1">
+            <span className="label">Unidade da carga</span>
+            <select id="ex-unit" value={unit} onChange={(e) => db.exercises.update(id, { loadUnit: e.target.value as LoadUnit })} className="field h-11 px-3">
+              {LOAD_UNITS.map((u) => (
+                <option key={u} value={u}>{u === 'tijolo' ? 'tijolos (pino da máquina)' : u}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
             <span className="label">Equipamento</span>
             <select id="ex-equip" value={exercise.equipment} onChange={(e) => db.exercises.update(id, { equipment: e.target.value as Equipment })} className="field h-11 px-3">
               {EQUIPMENTS.map((g) => (
@@ -130,9 +140,9 @@ export function ExerciseDetail() {
       {exercise.notes && !editing && <p className="text-sm text-muted">{exercise.notes}</p>}
 
       <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        <Stat label="Carga atual" value={summary.current ? fmtKg(summary.current.maxWeightKg) : '—'} unit="kg" />
-        <Stat label="Recorde" value={fmtKg(maxWeight)} unit="kg" />
-        <Stat label="1RM estimado" value={fmtKg(Math.round(best1RM))} unit="kg" />
+        <Stat label="Carga atual" value={summary.current ? fmtLoadValue(summary.current.maxWeightKg) : '—'} unit={unitLabel(unit, summary.current?.maxWeightKg)} />
+        <Stat label="Recorde" value={fmtLoadValue(maxWeight)} unit={unitLabel(unit, maxWeight)} />
+        <Stat label="1RM estimado" value={best1RM === null ? '—' : fmtKg(Math.round(best1RM))} unit={best1RM === null ? '' : 'kg'} />
         <Stat label="Sessões" value={String(points.length)} />
       </div>
 
@@ -141,8 +151,8 @@ export function ExerciseDetail() {
         <LineChart
           series={[{ id, name: exercise.name, color: 'var(--chart-1)', points: points.map((p) => ({ x: p.date, y: p.maxWeightKg, detail: `${p.reps.join(' · ')} reps` })) }]}
           height={260}
-          formatY={fmtKg}
-          unit="kg"
+          formatY={fmtLoadValue}
+          unit={unitLabel(unit)}
         />
       </section>
 
@@ -162,7 +172,7 @@ export function ExerciseDetail() {
                 <div className="flex items-center gap-3">
                   {p.isPR && <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold text-accent">PR</span>}
                   <span className="num text-sm">
-                    {fmtKg(p.maxWeightKg)} kg <span className="text-muted">× {p.reps.join(' · ')}</span>
+                    {fmtLoadValue(p.maxWeightKg)} {unitLabel(unit, p.maxWeightKg)} <span className="text-muted">× {p.reps.join(' · ')}</span>
                   </span>
                   {p.decision && <Decision value={p.decision} />}
                 </div>

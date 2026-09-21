@@ -1,5 +1,6 @@
 import type { Exercise, ExerciseLog, Session, SetEntry } from '../db/schema'
 import type { Decision } from './parse'
+import { progressionStep } from './units'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -119,8 +120,12 @@ export function rangeStartFor(key: RangeKey, now = Date.now()): number {
   return r?.days ? dayKey(now) - (r.days - 1) * DAY : 0
 }
 
-/** Sugestão de próxima carga para quem marcou "aumentar": 2,5 kg em barra/halter, 5 em máquina/cabo. */
-export function suggestNext(ex: Exercise, currentKg: number): number {
-  const step = ex.equipment === 'maquina' || ex.equipment === 'cabo' ? 5 : 2.5
-  return Math.round((currentKg + step) * 100) / 100
+/** Sugestão de próxima carga para quem marcou "aumentar", na unidade do exercício: 2,5 kg em barra/halter, 5 em máquina/cabo, 5 lb, 1 tijolo. */
+export function suggestNext(ex: Exercise, current: number): number {
+  return Math.round((current + progressionStep(ex)) * 100) / 100
+}
+
+/** Carga sugerida para quem marcou "diminuir". */
+export function suggestPrev(ex: Exercise, current: number): number {
+  return Math.max(0, Math.round((current - progressionStep(ex)) * 100) / 100)
 }

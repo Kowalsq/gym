@@ -15,6 +15,7 @@ import {
 } from '../db/queries'
 import { db, type Exercise, type SetEntry } from '../db/schema'
 import { EQUIPMENT_LABEL, fmtClock, fmtKg, muscleLabel } from '../lib/format'
+import { unitLabel, unitOf } from '../lib/units'
 
 function useNow(intervalMs: number) {
   const [now, setNow] = useState(() => Date.now())
@@ -171,7 +172,7 @@ function ExerciseBlock({ sessionId, exercise, sets }: { sessionId: string; exerc
       <div className="grid grid-cols-[22px_1fr_64px_56px_40px] items-center gap-2">
         <div className="label text-[10px]">#</div>
         <div className="label text-[10px]">Anterior</div>
-        <div className="label text-center text-[10px]">kg</div>
+        <div className="label text-center text-[10px]">{unitLabel(unitOf(exercise))}</div>
         <div className="label text-center text-[10px]">Reps</div>
         <div />
 

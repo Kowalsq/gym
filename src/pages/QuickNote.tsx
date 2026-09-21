@@ -4,8 +4,9 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { Decision } from '../components/Decision'
 import { isUsableLift, isUsableRun, matchExercises, saveParsedDays } from '../db/notes'
 import { db, getSetting, type Routine, type RoutineItem, type WeekPlan } from '../db/schema'
-import { analyze, suggestNext } from '../lib/analysis'
-import { fmtDayMonth, fmtKg, fmtKm, fmtClock } from '../lib/format'
+import { analyze, suggestNext, suggestPrev } from '../lib/analysis'
+import { fmtDayMonth, fmtKm, fmtClock } from '../lib/format'
+import { fmtLoad, unitOf } from '../lib/units'
 import { formatLine, formatRunLine, parseNotes } from '../lib/parse'
 import { suggestRoutine } from '../lib/plan'
 import { QuickForm } from './QuickForm'
@@ -127,8 +128,8 @@ export function QuickNote() {
       if (!chosen) return ''
       const cur = chosen.current
       if (!cur) return formatLine(chosen.exercise.name, null, Array(it.targetSets).fill(it.targetRepsMin), null)
-      const weight = cur.decision === 'aumentar' ? suggestNext(chosen.exercise, cur.maxWeightKg) : cur.decision === 'diminuir' ? Math.max(0, cur.maxWeightKg - 2.5) : cur.maxWeightKg
-      return formatLine(chosen.exercise.name, weight, cur.reps.length ? cur.reps : Array(it.targetSets).fill(it.targetRepsMin), null)
+      const weight = cur.decision === 'aumentar' ? suggestNext(chosen.exercise, cur.maxWeightKg) : cur.decision === 'diminuir' ? suggestPrev(chosen.exercise, cur.maxWeightKg) : cur.maxWeightKg
+      return formatLine(chosen.exercise.name, weight, cur.reps.length ? cur.reps : Array(it.targetSets).fill(it.targetRepsMin), null, unitOf(chosen.exercise))
     })
     onChange(lines.filter(Boolean).join('\n'))
   }
@@ -294,7 +295,12 @@ export function QuickNote() {
                           </span>
                         )}
                       </div>
-                      <div className="num text-right sm:text-left">{l.weightKg !== null ? `${fmtKg(l.weightKg)} kg` : '—'}</div>
+                      <div className="num text-right sm:text-left">
+                        {l.weightKg !== null ? fmtLoad(l.weightKg, l.unit ?? unitOf(l.exercise)) : '—'}
+                        {l.unit && l.exercise && l.unit !== unitOf(l.exercise) && (
+                          <span className="ml-1 text-[11px] text-warn">exercício está em {unitOf(l.exercise)}</span>
+                        )}
+                      </div>
                       <div className={`num col-span-2 sm:col-span-1 ${outOfRange ? 'text-warn' : 'text-muted'}`}>
                         {l.reps.length ? l.reps.join(' · ') + ' reps' : '—'}
                         {outOfRange && <span className="ml-1 text-[11px]">fora da faixa</span>}

@@ -5,8 +5,8 @@ import { Decision } from '../components/Decision'
 import { IconBack, IconTrash } from '../components/Icons'
 import { discardSession, setsOfSession } from '../db/queries'
 import { db, newId, type Exercise, type ExerciseLog, type Session, type SetEntry } from '../db/schema'
-import { fmtClock, fmtDuration, fmtInt, fmtKg, fmtKm, fmtPace, fmtWeekday } from '../lib/format'
-import { volumeKg } from '../lib/metrics'
+import { fmtClock, fmtDuration, fmtInt, fmtKm, fmtPace, fmtWeekday } from '../lib/format'
+import { fmtLoad, unitLabel, unitOf, volumeKgOf } from '../lib/units'
 import { formatLine, type Decision as DecisionValue } from '../lib/parse'
 
 const HOUR = 60 * 60 * 1000
@@ -93,7 +93,7 @@ export function SessionDetail() {
     .filter(Boolean) as string[]
 
   const asText = grouped
-    .map(({ ex, list, log }) => formatLine(ex!.name, Math.max(...list.map((s) => s.weightKg)), list.map((s) => s.reps), log?.decision ?? null))
+    .map(({ ex, list, log }) => formatLine(ex!.name, Math.max(...list.map((s) => s.weightKg)), list.map((s) => s.reps), log?.decision ?? null, unitOf(ex)))
     .join('\n')
 
   async function onDelete() {
@@ -118,7 +118,7 @@ export function SessionDetail() {
           <div className="label">{fmtWeekday(session.startedAt)}</div>
           <h1 className="font-display text-[24px] font-extrabold tracking-tight">{session.name}</h1>
           <div className="num mt-1 text-sm font-medium text-muted">
-            {session.endedAt ? fmtDuration(session.endedAt - session.startedAt) : ''} · {fmtInt(volumeKg(sets))} kg ·{' '}
+            {session.endedAt ? fmtDuration(session.endedAt - session.startedAt) : ''} · {fmtInt(volumeKgOf(sets, (exId) => unitOf(byId.get(exId))))} kg ·{' '}
             {sets.filter((s) => !s.isWarmup).length} séries
           </div>
         </div>
@@ -155,7 +155,7 @@ export function SessionDetail() {
                 <span className="font-medium">{ex!.name}</span>
                 <span className="flex items-center gap-3">
                   <span className="num text-sm">
-                    {fmtKg(Math.max(...list.map((s) => s.weightKg)))} kg{' '}
+                    {fmtLoad(Math.max(...list.map((s) => s.weightKg)), unitOf(ex))}{' '}
                     <span className="text-muted">× {list.map((s) => (s.isWarmup ? `${s.reps}a` : s.reps)).join(' · ')}</span>
                   </span>
                   {log?.decision && <Decision value={log.decision} />}
@@ -269,7 +269,7 @@ function SessionEditor({
             sessionId: session.id,
             exerciseId: p.exerciseId,
             decision: p.decision,
-            raw: formatLine(byId.get(p.exerciseId)?.name ?? '', p.weightKg!, p.repsNum, p.decision),
+            raw: formatLine(byId.get(p.exerciseId)?.name ?? '', p.weightKg!, p.repsNum, p.decision, unitOf(byId.get(p.exerciseId))),
           })
         }
         await db.sessions.update(session.id, {
@@ -318,12 +318,12 @@ function SessionEditor({
                     id={`ed-w-${i}`}
                     inputMode="decimal"
                     value={row.weight}
-                    placeholder="kg"
+                    placeholder={unitLabel(unitOf(ex))}
                     onChange={(e) => patch(i, { weight: e.target.value })}
                     className="field num h-12 w-[72px] text-center text-[17px]"
-                    aria-label="Carga em kg"
+                    aria-label={`Carga em ${unitLabel(unitOf(ex))}`}
                   />
-                  <span className="text-xs text-muted">kg</span>
+                  <span className="text-xs text-muted">{unitLabel(unitOf(ex))}</span>
                 </label>
                 <span className="text-muted">×</span>
                 {row.reps.map((r, k) => (

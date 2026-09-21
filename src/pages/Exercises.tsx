@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { IconPlus, IconSearch } from '../components/Icons'
 import { db, newId, type Equipment } from '../db/schema'
 import { EQUIPMENT_LABEL, muscleLabel } from '../lib/format'
+import { LOAD_UNITS, unitLabel, type LoadUnit } from '../lib/units'
 
 const EQUIPMENTS = Object.keys(EQUIPMENT_LABEL) as Equipment[]
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -65,6 +66,7 @@ export function Exercises() {
                 </div>
                 <div className="text-xs text-muted">
                   {EQUIPMENT_LABEL[e.equipment]} · {muscleLabel(e.muscleGroup)}
+                  {e.loadUnit && e.loadUnit !== 'kg' ? ` · em ${unitLabel(e.loadUnit)}` : ''}
                   {e.aliases?.length ? ` · também: ${e.aliases.join(', ')}` : ''}
                 </div>
               </div>
@@ -96,6 +98,7 @@ function NewExerciseSheet({ groups, onClose }: { groups: string[]; onClose: () =
   const [muscleGroup, setMuscleGroup] = useState('')
   const [equipment, setEquipment] = useState<Equipment>('maquina')
   const [isCompound, setIsCompound] = useState(false)
+  const [loadUnit, setLoadUnit] = useState<LoadUnit>('kg')
 
   async function onSave() {
     const trimmed = name.trim()
@@ -106,6 +109,7 @@ function NewExerciseSheet({ groups, onClose }: { groups: string[]; onClose: () =
       muscleGroup: muscleGroup.trim() || 'Outro',
       equipment,
       isCompound: isCompound || undefined,
+      loadUnit: loadUnit === 'kg' ? undefined : loadUnit,
       createdAt: Date.now(),
     })
     onClose()
@@ -137,6 +141,16 @@ function NewExerciseSheet({ groups, onClose }: { groups: string[]; onClose: () =
             {EQUIPMENTS.map((g) => (
               <option key={g} value={g}>
                 {EQUIPMENT_LABEL[g]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="label">Unidade da carga</span>
+          <select id="new-ex-unit" value={loadUnit} onChange={(e) => setLoadUnit(e.target.value as LoadUnit)} className="field h-12 px-3">
+            {LOAD_UNITS.map((u) => (
+              <option key={u} value={u}>
+                {u === 'tijolo' ? 'tijolos (pino da máquina)' : u}
               </option>
             ))}
           </select>

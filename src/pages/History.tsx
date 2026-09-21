@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { finishedSessions } from '../db/queries'
 import { db } from '../db/schema'
 import { fmtClock, fmtDuration, fmtInt, fmtKm, fmtPace } from '../lib/format'
+import { toKg, unitOf } from '../lib/units'
 
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 
@@ -10,12 +11,16 @@ export function History() {
   const sessions = useLiveQuery(() => finishedSessions(300), [])
   const allSets = useLiveQuery(() => db.sets.toArray(), [])
   const routines = useLiveQuery(() => db.routines.toArray(), [])
+  const exercises = useLiveQuery(() => db.exercises.toArray(), [])
+  const exById = new Map((exercises ?? []).map((e) => [e.id, e]))
   const routineSize = new Map((routines ?? []).map((r) => [r.id, r.items.length]))
 
   const volumeBySession = new Map<string, number>()
   for (const s of allSets ?? []) {
     if (s.isWarmup) continue
-    volumeBySession.set(s.sessionId, (volumeBySession.get(s.sessionId) ?? 0) + s.weightKg * s.reps)
+    const kg = toKg(s.weightKg, unitOf(exById.get(s.exerciseId)))
+    if (kg === null) continue
+    volumeBySession.set(s.sessionId, (volumeBySession.get(s.sessionId) ?? 0) + kg * s.reps)
   }
 
   const now = new Date()

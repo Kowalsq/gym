@@ -1,4 +1,5 @@
 import { normalizeName } from '../lib/parse'
+import type { LoadUnit } from '../lib/units'
 import { db, getSetting, newId, setSetting, type Equipment, type Exercise, type Routine, type RoutineItem, type WeekPlan } from './schema'
 
 /**
@@ -9,16 +10,17 @@ interface ExerciseSeed {
   name: string
   muscleGroup: string
   equipment: Equipment
+  loadUnit?: LoadUnit
   isCompound?: boolean
   aliases?: string[]
 }
 
 const EXERCISES: ExerciseSeed[] = [
   { name: 'Supino Inclinado Halteres', muscleGroup: 'Peito Composto', equipment: 'halter', isCompound: true, aliases: ['Supino inclinado'] },
-  { name: 'Puxada Alta Frontal', muscleGroup: 'Costas/Dorsal', equipment: 'cabo', aliases: ['Puxada frontal', 'Puxada alta'] },
+  { name: 'Puxada Alta Frontal', muscleGroup: 'Costas/Dorsal', equipment: 'cabo', loadUnit: 'lb', aliases: ['Puxada frontal', 'Puxada alta'] },
   { name: 'Crucifixo', muscleGroup: 'Peito', equipment: 'maquina', aliases: ['Crucifixo polia', 'Crucifixo máquina', 'Crucifixo na polia', 'Crucifixo na máquina'] },
   { name: 'Elevação Lateral', muscleGroup: 'Deltoide', equipment: 'halter' },
-  { name: 'Tríceps na Polia', muscleGroup: 'Tríceps', equipment: 'cabo', aliases: ['Tríceps polia', 'Tríceps corda'] },
+  { name: 'Tríceps na Polia', muscleGroup: 'Tríceps', equipment: 'cabo', loadUnit: 'tijolo', aliases: ['Tríceps polia', 'Tríceps corda'] },
   { name: 'Bíceps na Polia', muscleGroup: 'Bíceps', equipment: 'cabo', aliases: ['Bíceps polia', 'Rosca polia'] },
   { name: 'Bíceps Barra W', muscleGroup: 'Bíceps', equipment: 'barra', aliases: ['Rosca barra W', 'Rosca W'] },
   { name: 'Bíceps Scott Halter', muscleGroup: 'Bíceps', equipment: 'halter', aliases: ['Scott', 'Rosca Scott', 'Bíceps Scott', 'Scott halter'] },
@@ -30,7 +32,7 @@ const EXERCISES: ExerciseSeed[] = [
   { name: 'Remada Baixa no Cabo', muscleGroup: 'Costas/Meio', equipment: 'cabo', aliases: ['Remada baixa'] },
   { name: 'Remada em Máquina', muscleGroup: 'Costas/Meio', equipment: 'maquina', aliases: ['Remada máquina'] },
   { name: 'Crucifixo Invertido', muscleGroup: 'Deltoide Posterior', equipment: 'maquina', aliases: ['Crucifixo inverso', 'Crucifixo invertido máquina', 'Crucifixo invertido polia'] },
-  { name: 'Puxada Alta Supinada', muscleGroup: 'Costas/Dorsal', equipment: 'cabo', aliases: ['Puxada supinada'] },
+  { name: 'Puxada Alta Supinada', muscleGroup: 'Costas/Dorsal', equipment: 'cabo', loadUnit: 'lb', aliases: ['Puxada supinada'] },
   { name: 'Leg Press', muscleGroup: 'Quadríceps/Glúteo', equipment: 'maquina', isCompound: true },
 ]
 
@@ -81,7 +83,7 @@ const ROUTINES: { name: string; description: string; items: ItemSeed[] }[] = [
 ]
 
 /** Sobe quando o programa muda; `applyProgramUpdates` migra bancos antigos. */
-const PROGRAM_VERSION = 3
+const PROGRAM_VERSION = 4
 
 /**
  * Garante que os exercícios do programa existam (casando por nome ou alias com
@@ -108,6 +110,7 @@ export async function seedProgramIfMissing(): Promise<void> {
       const patch: Partial<Exercise> = {}
       if (!found.aliases?.length && seed.aliases) patch.aliases = seed.aliases
       if (found.isCompound === undefined && seed.isCompound) patch.isCompound = true
+      if (found.loadUnit === undefined && seed.loadUnit) patch.loadUnit = seed.loadUnit
       if (Object.keys(patch).length) await db.exercises.update(found.id, patch)
       continue
     }
@@ -159,6 +162,7 @@ export async function seedProgramIfMissing(): Promise<void> {
  * Migrações do programa para quem já tinha as rotinas gravadas.
  * v2: treino B troca Stiff + Cadeira Romana por Levantamento Terra.
  * v3: Bíceps na Polia vira Bíceps Scott Halter em todos os treinos.
+ * v4: unidade de carga: puxadas em lb, tríceps na polia em tijolos (só onde ainda não definida).
  */
 async function applyProgramUpdates(idByName: Map<string, string>): Promise<void> {
   const version = (await getSetting<number>('programVersion')) ?? 1

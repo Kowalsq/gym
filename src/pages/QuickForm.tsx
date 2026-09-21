@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react'
 import { Decision as DecisionChip } from '../components/Decision'
 import { saveParsedDays, type SaveResult } from '../db/notes'
 import type { Exercise, Routine, RoutineItem } from '../db/schema'
-import { suggestNext, type Analysis } from '../lib/analysis'
-import { fmtDayMonth, fmtKg } from '../lib/format'
+import { suggestNext, suggestPrev, type Analysis } from '../lib/analysis'
+import { fmtDayMonth } from '../lib/format'
+import { fmtLoad, unitLabel, unitOf } from '../lib/units'
 import { formatLine, type Decision, type ParsedLine } from '../lib/parse'
 
 interface Row {
@@ -49,7 +50,7 @@ export function QuickForm({ routine, exercises, analysis, date, onSaved }: Props
     const ex = exById.get(exerciseId)
     let weight = ''
     if (cur && ex) {
-      const w = cur.decision === 'aumentar' ? suggestNext(ex, cur.maxWeightKg) : cur.decision === 'diminuir' ? Math.max(0, cur.maxWeightKg - 2.5) : cur.maxWeightKg
+      const w = cur.decision === 'aumentar' ? suggestNext(ex, cur.maxWeightKg) : cur.decision === 'diminuir' ? suggestPrev(ex, cur.maxWeightKg) : cur.maxWeightKg
       weight = String(w).replace('.', ',')
     }
     return { exerciseId, weight, reps: Array(it.targetSets).fill(''), decision: null, skipped: false }
@@ -92,7 +93,7 @@ export function QuickForm({ routine, exercises, analysis, date, onSaved }: Props
           const name = exById.get(p.row.exerciseId)?.name ?? ''
           return {
             kind: 'lift',
-            raw: formatLine(name, p.weight, p.filledReps, p.decision),
+            raw: formatLine(name, p.weight, p.filledReps, p.decision, unitOf(exById.get(p.row.exerciseId))),
             name,
             weightKg: p.weight!,
             reps: p.filledReps,
@@ -141,7 +142,7 @@ export function QuickForm({ routine, exercises, analysis, date, onSaved }: Props
                   <div className="text-[11px] text-muted">
                     alvo {it.targetSets}×{it.targetRepsMin}–{it.targetRepsMax}
                     {it.rirMin !== undefined ? ` · RIR ${it.rirMin}–${it.rirMax ?? it.rirMin}` : ''}
-                    {cur ? ` · ${fmtDayMonth(cur.date)}: ${fmtKg(cur.maxWeightKg)} × ${cur.reps.join(' · ')}` : ' · primeira vez'}
+                    {cur ? ` · ${fmtDayMonth(cur.date)}: ${fmtLoad(cur.maxWeightKg, unitOf(ex))} × ${cur.reps.join(' · ')}` : ' · primeira vez'}
                   </div>
                 </div>
                 <button
@@ -161,12 +162,12 @@ export function QuickForm({ routine, exercises, analysis, date, onSaved }: Props
                       id={`qf-w-${i}`}
                       inputMode="decimal"
                       value={row.weight}
-                      placeholder="kg"
+                      placeholder={unitLabel(unitOf(ex))}
                       onChange={(e) => patch(i, { weight: e.target.value })}
                       className="field num h-12 w-[72px] text-center text-[17px]"
-                      aria-label="Carga em kg"
+                      aria-label={`Carga em ${unitLabel(unitOf(ex))}`}
                     />
-                    <span className="text-xs text-muted">kg</span>
+                    <span className="text-xs text-muted">{unitLabel(unitOf(ex))}</span>
                   </label>
                   <span className="text-muted">×</span>
                   {row.reps.map((r, k) => (

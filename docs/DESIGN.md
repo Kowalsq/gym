@@ -90,6 +90,8 @@ BodyWeight      { id, date, kg }                       (fase 4)
 
 `ExerciseLog` é um por exercício por sessão e guarda a decisão para o próximo treino e o texto original digitado.
 
+**Unidade de carga** (`Exercise.loadUnit`): `kg` (padrão), `lb` ou `tijolo` (posição do pino da máquina). O número em `SetEntry.weightKg` está na unidade do exercício; o nome do campo é histórico. Tudo que mostra carga usa a unidade do exercício (`src/lib/units.ts`). Volume em kg converte lb (×0,4536) e ignora tijolos. 1RM só para kg e lb. Progressão sugerida: 2,5 kg em barra/halter, 5 kg em máquina/cabo, 5 lb, 1 tijolo. No texto: `60lb`, `9 tijolos`; sem sufixo é a unidade do exercício. Linha com unidade define a do exercício quando ele ainda não tem. Gráfico com exercícios de unidades diferentes mostra a unidade no nome da série e sem unidade no eixo. No programa: Tríceps na Polia em tijolos, as duas puxadas em lb.
+
 ## O programa
 
 Três treinos full body, A, B e C, com 2 séries por exercício. Compostos (marcados com *) em 6–8 reps com RIR 1–2; isolados em 8–10 ou 10–12 com RIR 0–1. Alguns itens aceitam alternativa ("Remada Baixa no Cabo ou Remada em Máquina", "Leg Press ou Cadeira Extensora"). O treino B tem Agachamento, Levantamento Terra e Desenvolvimento como compostos. Bíceps é feito no banco Scott com halter (alternativa: barra W). Plano da semana: Seg A, Ter corrida, Qua B, Qui corrida, Sex C. Tudo isso é carregado na primeira abertura por `src/db/seed.ts` e editável na tela Treinos. Quando o programa muda no código, `PROGRAM_VERSION` sobe e uma migração ajusta bancos existentes sem apagar histórico.

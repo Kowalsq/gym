@@ -135,6 +135,7 @@ export async function saveParsedDays(days: ParsedDay[], exercises: Exercise[], o
             name: line.name,
             muscleGroup: 'Outro',
             equipment: 'outro',
+            loadUnit: line.unit && line.unit !== 'kg' ? line.unit : undefined,
             createdAt: Date.now(),
           }
           await db.exercises.add(exercise)
@@ -142,6 +143,11 @@ export async function saveParsedDays(days: ParsedDay[], exercises: Exercise[], o
           result.newExercises++
         }
         if (!exerciseIds.includes(exercise.id)) exerciseIds.push(exercise.id)
+        // Linha com unidade explícita define a do exercício quando ele ainda não tem.
+        if (line.unit && line.unit !== 'kg' && exercise.loadUnit === undefined) {
+          await db.exercises.update(exercise.id, { loadUnit: line.unit })
+          exercise.loadUnit = line.unit
+        }
 
         // Substitui séries e log anteriores deste exercício no mesmo dia.
         await db.sets.where('[sessionId+exerciseId]').equals([session.id, exercise.id]).delete()

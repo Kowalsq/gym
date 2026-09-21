@@ -7,8 +7,9 @@ import { LineChart, type ChartSeries } from '../components/LineChart'
 import { IconPlus } from '../components/Icons'
 import { SyncBadge } from '../components/SyncBadge'
 import { db, getSetting, type WeekPlan } from '../db/schema'
-import { RANGES, analyze, dayKey, rangeStartFor, suggestNext, type RangeKey } from '../lib/analysis'
-import { fmtDayMonth, fmtKg, fmtKm } from '../lib/format'
+import { RANGES, analyze, dayKey, rangeStartFor, suggestNext, suggestPrev, type RangeKey } from '../lib/analysis'
+import { fmtDayMonth, fmtKm } from '../lib/format'
+import { fmtLoad, fmtLoadValue, unitLabel, unitOf } from '../lib/units'
 import { WEEKDAY_SHORT, slotLabel, suggestRoutine, weekStart } from '../lib/plan'
 import { skipStreaks } from '../lib/skips'
 
@@ -64,7 +65,7 @@ export function Home() {
     const s = analysis?.byExercise.get(id)
     return {
       id,
-      name: s?.exercise.name ?? '',
+      name: s ? `${s.exercise.name}${unitOf(s.exercise) !== 'kg' ? ` (${unitLabel(unitOf(s.exercise))})` : ''}` : '',
       color: COLORS[i],
       points: (s?.points ?? []).filter((p) => p.date >= rangeStart).map((p) => ({ x: p.date, y: p.maxWeightKg, detail: `${p.reps.join(' · ')} reps` })),
     }
@@ -72,6 +73,9 @@ export function Home() {
 
   const suggestion = useMemo(() => (routines && sessions ? suggestRoutine(plan, routines, sessions, now) : null), [plan, routines, sessions, now])
   const toIncrease = summaries.filter((s) => s.current?.decision === 'aumentar').length
+  // Unidade do eixo: só quando todas as séries escolhidas usam a mesma.
+  const chartUnits = new Set(chosen.map((id) => unitOf(analysis?.byExercise.get(id)?.exercise)))
+  const chartUnit = chartUnits.size === 1 ? unitLabel([...chartUnits][0]) : ''
   const skips = useMemo(
     () => (routines && sessions && sets && exercises ? skipStreaks(routines, sessions, sets, exercises) : []),
     [routines, sessions, sets, exercises],
@@ -235,7 +239,7 @@ export function Home() {
                   )
                 })}
               </div>
-              <LineChart series={chartSeries} height={280} formatY={fmtKg} unit="kg" />
+              <LineChart series={chartSeries} height={280} formatY={fmtLoadValue} unit={chartUnit} />
               {chartSeries.length > 1 && (
                 <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
                   {chartSeries.map((s) => (
@@ -284,7 +288,7 @@ export function Home() {
                   const cur = s.current
                   const up = cur?.decision === 'aumentar'
                   const down = cur?.decision === 'diminuir'
-                  const next = cur ? (up ? suggestNext(s.exercise, cur.maxWeightKg) : down ? Math.max(0, cur.maxWeightKg - 2.5) : cur.maxWeightKg) : null
+                  const next = cur ? (up ? suggestNext(s.exercise, cur.maxWeightKg) : down ? suggestPrev(s.exercise, cur.maxWeightKg) : cur.maxWeightKg) : null
                   return (
                     <li key={`${it.exerciseId}-${i}`} className="flex items-center justify-between gap-3 py-2">
                       <div className="min-w-0">
@@ -305,12 +309,12 @@ export function Home() {
                         {cur ? (
                           up || down ? (
                             <>
-                              <span className="text-muted">{fmtKg(cur.maxWeightKg)}</span>
+                              <span className="text-muted">{fmtLoadValue(cur.maxWeightKg)}</span>
                               <span className="mx-1 text-muted">→</span>
-                              <span className={up ? 'text-good' : 'text-warn'}>{fmtKg(next!)}</span>
+                              <span className={up ? 'text-good' : 'text-warn'}>{fmtLoad(next!, unitOf(s.exercise))}</span>
                             </>
                           ) : (
-                            <span>{fmtKg(cur.maxWeightKg)} kg</span>
+                            <span>{fmtLoad(cur.maxWeightKg, unitOf(s.exercise))}</span>
                           )
                         ) : (
                           <span className="text-muted">—</span>
@@ -360,10 +364,10 @@ export function Home() {
                       </Link>
                       {c.isPR && <span className="ml-2 rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold text-accent">PR</span>}
                     </td>
-                    <td className="num px-3 py-2.5 text-right">{fmtKg(c.maxWeightKg)} kg</td>
+                    <td className="num px-3 py-2.5 text-right">{fmtLoad(c.maxWeightKg, unitOf(s.exercise))}</td>
                     <td className="num px-3 py-2.5 text-muted">{c.reps.join(' · ')}</td>
                     <td className={`num px-3 py-2.5 text-right ${s.deltaKg === null ? 'text-muted' : s.deltaKg > 0 ? 'text-good' : s.deltaKg < 0 ? 'text-warn' : 'text-muted'}`}>
-                      {s.deltaKg === null ? '—' : `${s.deltaKg > 0 ? '+' : ''}${fmtKg(s.deltaKg)}`}
+                      {s.deltaKg === null ? '—' : `${s.deltaKg > 0 ? '+' : ''}${fmtLoadValue(s.deltaKg)} ${unitLabel(unitOf(s.exercise), Math.abs(s.deltaKg))}`}
                     </td>
                     <td className="px-3 py-2.5">{c.decision ? <Decision value={c.decision} /> : <span className="text-muted">—</span>}</td>
                     <td className="px-4 py-2.5 text-right text-muted">{fmtDayMonth(c.date)}</td>

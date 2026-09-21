@@ -49,6 +49,26 @@ describe('parseLine', () => {
   it('linha vazia é null', () => {
     expect(parseLine('   ')).toBeNull()
   })
+
+  it('peso em lb', () => {
+    const p = parseLine('Puxada Alta Frontal 60lb 10 8 manter')!
+    expect(p.weightKg).toBe(60)
+    expect(p.unit).toBe('lb')
+    expect(p.reps).toEqual([10, 8])
+  })
+
+  it('peso em tijolos', () => {
+    const p = parseLine('Tríceps na Polia 9 tijolos 12 12 aumentar')!
+    expect(p.weightKg).toBe(9)
+    expect(p.unit).toBe('tijolo')
+    expect(p.reps).toEqual([12, 12])
+    expect(p.warnings).toEqual([])
+  })
+
+  it('kg explícito marca a unidade; sem sufixo não marca', () => {
+    expect(parseLine('Supino 80kg 8 8')!.unit).toBe('kg')
+    expect(parseLine('Supino 80 8 8')!.unit).toBeUndefined()
+  })
 })
 
 describe('parseLine corrida', () => {
@@ -131,6 +151,12 @@ describe('formatLine', () => {
   })
   it('sem peso deixa só nome e reps', () => {
     expect(formatLine('Stiff', null, [8, 8], null)).toBe('Stiff 2x8')
+  })
+  it('unidade diferente de kg vai junto do número e volta pelo parser', () => {
+    expect(formatLine('Tríceps na Polia', 9, [12, 12], 'aumentar', 'tijolo')).toBe('Tríceps na Polia 9 tijolos 2x12 aumentar')
+    expect(formatLine('Puxada Alta Frontal', 60, [10, 8], null, 'lb')).toBe('Puxada Alta Frontal 60lb 10 8')
+    const back = parseLine('Tríceps na Polia 9 tijolos 2x12 aumentar')!
+    expect([back.weightKg, back.unit, back.reps]).toEqual([9, 'tijolo', [12, 12]])
   })
 })
 

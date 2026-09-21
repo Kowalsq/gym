@@ -16,6 +16,8 @@
  * removidos e a data deles é usada.
  */
 
+import type { LoadUnit } from './units'
+
 export type Decision = 'manter' | 'aumentar' | 'diminuir'
 
 export interface ParsedLine {
@@ -23,6 +25,8 @@ export interface ParsedLine {
   kind: 'lift' | 'run'
   name: string
   weightKg: number | null
+  /** Unidade escrita na linha (kg, lb ou tijolos), se houver. */
+  unit?: LoadUnit
   reps: number[]
   decision: Decision | null
   /** Corrida. */
@@ -56,7 +60,8 @@ const RUN_WORDS = new Set(['corrida', 'correr', 'corri', 'run', 'caminhada', 'es
 
 const WA_PREFIX = /^\[?(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s+\d{1,2}:\d{2}(?::\d{2})?\]?\s*-?\s*[^:]+:\s*/
 const DATE_LINE = /^(?:[a-zçà-ü-]+\s+)?(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\s*$/i
-const NUM = /^(\d+(?:[.,]\d+)?)(kg)?$/i
+const NUM = /^(\d+(?:[.,]\d+)?)(kg|lbs?)?$/i
+const BRICK_WORDS = new Set(['tijolo', 'tijolos', 'placa', 'placas', 'pino'])
 const SETS = /^(\d+)\s*x\s*(\d+)$/i
 const DIST = /^(\d+(?:[.,]\d+)?)\s*(km|k|m)$/i
 const TIME_MIN = /^(\d+(?:[.,]\d+)?)\s*(min|m|minutos)$/i
@@ -158,6 +163,7 @@ export function parseLine(input: string): ParsedLine | null {
   if (!name) return { raw, kind: 'lift', name: '', weightKg: null, reps: [], decision, warnings: ['Linha sem nome de exercício.'] }
 
   let weightKg: number | null = null
+  let unit: LoadUnit | undefined
   const reps: number[] = []
   const plainNumbers: number[] = []
   let setsPattern: [number, number] | null = null
@@ -172,9 +178,14 @@ export function parseLine(input: string): ParsedLine | null {
     const n = NUM.exec(t)
     if (n) {
       const value = toNumber(n[1])
-      if (n[2]) {
-        if (weightKg !== null) warnings.push('Mais de um peso com "kg"; usei o primeiro.')
-        else weightKg = value
+      const next = tokens[i + 1]?.toLowerCase()
+      if (n[2] || (next && BRICK_WORDS.has(next))) {
+        if (weightKg !== null) warnings.push('Mais de um peso com unidade; usei o primeiro.')
+        else {
+          weightKg = value
+          unit = n[2] ? (n[2].toLowerCase().startsWith('lb') ? 'lb' : 'kg') : 'tijolo'
+        }
+        if (!n[2]) i++
       } else {
         plainNumbers.push(value)
       }
@@ -198,7 +209,7 @@ export function parseLine(input: string): ParsedLine | null {
   if (weightKg === null) warnings.push('Sem peso.')
   if (reps.length === 0) warnings.push('Sem repetições.')
 
-  return { raw, kind: 'lift', name, weightKg, reps, decision, warnings }
+  return { raw, kind: 'lift', name, weightKg, unit, reps, decision, warnings }
 }
 
 /** Divide o texto em dias. Linhas sem data caem no dia informado em `defaultDate`. */
@@ -253,9 +264,10 @@ export function normalizeName(s: string): string {
     .trim()
 }
 
-/** Formata uma linha no mesmo padrão do WhatsApp, para exportar ou copiar. */
-export function formatLine(name: string, weightKg: number | null, reps: number[], decision: Decision | null): string {
-  const w = weightKg === null ? '' : String(weightKg).replace('.', ',')
+/** Formata uma linha no mesmo padrão do WhatsApp, para exportar ou copiar. Unidade só quando não é kg. */
+export function formatLine(name: string, weightKg: number | null, reps: number[], decision: Decision | null, unit: LoadUnit = 'kg'): string {
+  const suffix = weightKg === null || unit === 'kg' ? '' : unit === 'lb' ? 'lb' : weightKg === 1 ? ' tijolo' : ' tijolos'
+  const w = weightKg === null ? '' : String(weightKg).replace('.', ',') + suffix
   const allSame = reps.length > 1 && reps.every((r) => r === reps[0])
   const repsPart = reps.length === 0 ? '' : allSame ? `${reps.length}x${reps[0]}` : reps.join(' ')
   return [name, w, repsPart, decision ?? ''].filter(Boolean).join(' ')
