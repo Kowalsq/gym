@@ -42,7 +42,7 @@ export function Shell() {
         <SyncBadge className="mt-auto px-3" />
       </aside>
 
-      <main className="flex-1 overflow-y-auto px-4 pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-6 lg:px-10 lg:py-8">
+      <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-6 [overscroll-behavior-x:none] lg:px-10 lg:py-8">
         <Outlet />
       </main>
 

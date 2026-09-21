@@ -67,7 +67,7 @@ export function Workout() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col overflow-x-hidden">
       <header className="flex items-center justify-between gap-3 px-4 pt-[calc(env(safe-area-inset-top,0px)+14px)] pb-3">
         <div>
           <div className="label">{session.name}</div>

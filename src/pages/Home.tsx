@@ -124,14 +124,14 @@ export function Home() {
   const runKm = runs.reduce((n, s) => n + (s.distanceKm ?? 0), 0)
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[28px] font-extrabold tracking-tight lg:text-[32px]">Evolução</h1>
           <p className="text-sm text-muted">Carga por exercício, o próximo treino e a semana.</p>
           <SyncBadge className="mt-1 lg:hidden" />
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {RANGES.map((r) => (
             <button
               key={r.key}
@@ -211,8 +211,8 @@ export function Home() {
         <IconPlus /> Anotar {suggestion ? `treino ${suggestion.routine.name}` : 'treino de hoje'}
       </Link>
 
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr] lg:items-start">
-        <section className="card flex flex-col gap-3">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[2fr_1fr] lg:items-start">
+        <section className="card flex min-w-0 flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="label">Carga máxima por sessão</div>
             <div className="text-xs text-muted">até {MAX_SERIES} exercícios · clique para trocar</div>
@@ -255,7 +255,7 @@ export function Home() {
           )}
         </section>
 
-        <section className="card flex flex-col gap-3">
+        <section className="card flex min-w-0 flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="label">Próximo treino</div>
             {suggestion && (
@@ -342,7 +342,7 @@ export function Home() {
       </div>
 
       {!empty && (
-        <section className="card overflow-x-auto p-0">
+        <section className="card min-w-0 overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left">
@@ -380,7 +380,7 @@ export function Home() {
         </section>
       )}
 
-      <section className="card flex flex-col gap-3">
+      <section className="card flex min-w-0 flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="label">Frequência · últimas 26 semanas</div>
           <div className="text-xs text-muted">{analysis.dayCounts.size} dias ativos no total</div>
