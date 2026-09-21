@@ -125,7 +125,7 @@ Seis seções: **Evolução · Anotar · Histórico · Treinos · Exercícios ·
 ### 1. Evolução (tela inicial, foco no PC)
 - **Esta semana**: sete dias com o plano (A, B, C, C de corrida, traço para descanso). Feito fica preenchido, hoje destacado, planejado e não feito fica com contorno tracejado. Dia fora do plano não é erro: a sequência A → B → C continua de onde parou.
 - Filtro de período em uma linha: 30 dias, 90 dias, 6 meses, 1 ano, tudo. Vale para tudo abaixo.
-- **Gráfico de carga máxima por sessão**, até quatro exercícios ao mesmo tempo, com tooltip que mostra reps de cada série. Cores de série em ordem fixa, validadas para daltonismo (`--chart-1..4`).
+- **Gráfico de carga máxima por sessão**, até oito exercícios ao mesmo tempo, com tooltip que mostra reps de cada série. Cores de série em ordem fixa, validadas para daltonismo (`--chart-1..8`; a pior adjacência fica na faixa de aviso, coberta por legenda e tooltip).
 - **Próximo treino**: qual treino é (plano de hoje ou sequência), a lista de exercícios com alvo (séries × faixa · RIR), última carga e reps, e a carga sugerida quando marcou aumentar ou diminuir (2,5 kg em barra e halter, 5 kg em máquina e cabo). Botão "Anotar treino X".
 - Cinco números: treinos, corridas (com km), exercícios acompanhados, recordes, marcados para aumentar.
 - Tabela de todos os exercícios: carga atual, reps, variação no período, decisão, última vez. Selo PR quando a última sessão foi recorde.

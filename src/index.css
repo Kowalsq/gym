@@ -18,6 +18,10 @@
   --chart-2: #4a90e2;
   --chart-3: #8f8f14;
   --chart-4: #b85cc6;
+  --chart-5: #20a3a3;
+  --chart-6: #c94a6e;
+  --chart-7: #9e7b14;
+  --chart-8: #5e7fd6;
   color-scheme: dark;
 }
 
@@ -37,6 +41,10 @@
   --chart-2: #2b7be0;
   --chart-3: #7e8a00;
   --chart-4: #a040c0;
+  --chart-5: #0e9a8a;
+  --chart-6: #c22866;
+  --chart-7: #a07c00;
+  --chart-8: #3f63c9;
   color-scheme: light;
 }
 
@@ -56,6 +64,10 @@
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
   --font-display: 'Archivo', system-ui, sans-serif;
   --font-body: 'Public Sans', system-ui, sans-serif;
   --radius-card: 12px;

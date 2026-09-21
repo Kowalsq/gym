@@ -13,7 +13,8 @@ import { fmtLoad, fmtLoadValue, unitLabel, unitOf } from '../lib/units'
 import { WEEKDAY_SHORT, slotLabel, suggestRoutine, weekStart } from '../lib/plan'
 import { skipStreaks } from '../lib/skips'
 
-const COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)']
+const COLORS = Array.from({ length: 8 }, (_, i) => `var(--chart-${i + 1})`)
+const MAX_SERIES = 8
 const DAY = 24 * 60 * 60 * 1000
 
 function readRange(): RangeKey {
@@ -61,7 +62,7 @@ export function Home() {
   )
   const chosen = selected ?? defaultSelected
 
-  const chartSeries: ChartSeries[] = chosen.slice(0, 4).map((id, i) => {
+  const chartSeries: ChartSeries[] = chosen.slice(0, MAX_SERIES).map((id, i) => {
     const s = analysis?.byExercise.get(id)
     return {
       id,
@@ -112,7 +113,7 @@ export function Home() {
   function toggle(id: string) {
     const cur = chosen
     if (cur.includes(id)) setSelected(cur.filter((x) => x !== id))
-    else if (cur.length < 4) setSelected([...cur, id])
+    else if (cur.length < MAX_SERIES) setSelected([...cur, id])
     else setSelected([...cur.slice(1), id])
   }
 
@@ -210,11 +211,11 @@ export function Home() {
         <IconPlus /> Anotar {suggestion ? `treino ${suggestion.routine.name}` : 'treino de hoje'}
       </Link>
 
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr] lg:items-start">
         <section className="card flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="label">Carga máxima por sessão</div>
-            <div className="text-xs text-muted">até 4 exercícios · clique para trocar</div>
+            <div className="text-xs text-muted">até {MAX_SERIES} exercícios · clique para trocar</div>
           </div>
           {empty ? (
             <p className="max-w-prose py-8 text-center text-sm text-muted">
