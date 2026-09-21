@@ -25,9 +25,12 @@ if (import.meta.env.DEV) {
   })
 }
 
+// Em produção o app é servido em /gym/; o roteador precisa saber disso.
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '')
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <App />
     </BrowserRouter>
   </StrictMode>,

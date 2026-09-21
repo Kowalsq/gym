@@ -13,6 +13,14 @@ npm run dev
 
 Abra o endereço mostrado no terminal. Para testar no celular na mesma rede: `npm run dev -- --host`.
 
+## Produção
+
+Publicado no GitHub Pages em **https://kowalsq.github.io/gym/**. Todo push na `main` roda testes, faz o build e publica (`.github/workflows/deploy.yml`). A primeira execução liga o Pages sozinha; se falhar, em *Settings → Pages* escolha *Source: GitHub Actions* e rode o workflow de novo.
+
+No celular, abra o endereço no Chrome e use *Adicionar à tela inicial*. O app funciona offline depois do primeiro acesso.
+
+Os dados ficam no aparelho: celular e PC têm bancos separados. Para levar do celular ao PC, use *Ajustes → Exportar backup* e importe no outro.
+
 ## Comandos
 
 | Comando | O que faz |
