@@ -1,0 +1,109 @@
+@import 'tailwindcss';
+
+/* Tokens do design (docs/DESIGN.md). Tema escuro é o principal. */
+:root {
+  --bg: #141619;
+  --surface: #1e2126;
+  --surface-2: #282c33;
+  --line: #343941;
+  --text: #eceef1;
+  --muted: #8b929c;
+  --accent: #ff7a1a;
+  --accent-ink: #1a0d00;
+  --accent-soft: rgba(255, 122, 26, 0.14);
+  --good: #4cc38a;
+  --warn: #f2c94c;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --bg: #eef0f3;
+  --surface: #ffffff;
+  --surface-2: #e3e6eb;
+  --line: #d2d6dd;
+  --text: #15181c;
+  --muted: #5f6772;
+  --accent: #e2620a;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(226, 98, 10, 0.12);
+  --good: #1f8f5b;
+  --warn: #b08600;
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --font-display: 'Archivo', system-ui, sans-serif;
+  --font-body: 'Public Sans', system-ui, sans-serif;
+  --radius-card: 12px;
+  --radius-field: 10px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+@utility label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+@utility num {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility card {
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: 14px;
+}
+
+@utility field {
+  background: var(--surface-2);
+  border-radius: var(--radius-field);
+  color: var(--text);
+  border: 0;
+  outline: 0;
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+  }
+}
+
+@utility tap {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
