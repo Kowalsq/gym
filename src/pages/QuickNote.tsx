@@ -175,7 +175,9 @@ export function QuickNote() {
           </button>
           {suggestion && (
             <span className="ml-1 text-xs text-muted">
-              {suggestion.reason === 'hoje' ? `Plano de hoje: treino ${suggestion.routine.name}` : `Próximo na sequência: treino ${suggestion.routine.name}`}
+              {suggestion.reason === 'hoje'
+                ? `Plano de hoje: treino ${suggestion.routine.name}`
+                : `Próximo na sequência: treino ${suggestion.routine.name}${suggestion.todaySlot?.type === 'run' ? ' · hoje é dia de corrida' : ''}`}
             </span>
           )}
         </div>

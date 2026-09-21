@@ -15,13 +15,16 @@ export function slotLabel(slot: PlanSlot, routines: Routine[]): string {
 
 export interface Suggestion {
   routine: Routine
+  /** 'hoje' quando o próximo da sequência coincide com o plano de hoje. */
   reason: 'hoje' | 'sequencia'
+  /** O que o plano diz para hoje, para informar ("hoje era dia de corrida"). */
+  todaySlot?: PlanSlot
 }
 
 /**
- * Qual treino fazer agora. Se o plano de hoje tem um treino e ele ainda não foi
- * feito hoje, é ele. Senão, o próximo na sequência depois do último treino
- * registrado (A → B → C → A).
+ * Qual treino fazer agora: sempre o próximo na sequência depois do último
+ * treino registrado (A → B → C → A), porque o dia da semana varia. O plano da
+ * semana só informa; se coincidir com a sequência, o motivo vira "hoje".
  */
 export function suggestRoutine(plan: WeekPlan | undefined, routines: Routine[], sessions: Session[], now = Date.now()): Suggestion | null {
   const ordered = [...routines].sort((a, b) => a.order - b.order)
@@ -29,20 +32,15 @@ export function suggestRoutine(plan: WeekPlan | undefined, routines: Routine[], 
 
   const today = new Date(now)
   today.setHours(0, 0, 0, 0)
-  const todayStart = today.getTime()
-  const gym = sessions.filter((s) => s.endedAt !== undefined && s.kind !== 'run')
-  const doneToday = new Set(gym.filter((s) => s.startedAt >= todayStart).map((s) => s.routineId))
+  const todaySlot = plan?.[today.getDay()]
 
-  const slot = plan?.[today.getDay()]
-  if (slot?.type === 'routine') {
-    const r = ordered.find((x) => x.id === slot.routineId)
-    if (r && !doneToday.has(r.id)) return { routine: r, reason: 'hoje' }
-  }
+  const last = sessions
+    .filter((s) => s.endedAt !== undefined && s.kind !== 'run' && s.routineId && ordered.some((r) => r.id === s.routineId))
+    .sort((a, b) => b.startedAt - a.startedAt)[0]
 
-  const last = gym.filter((s) => s.routineId).sort((a, b) => b.startedAt - a.startedAt)[0]
-  if (!last) return { routine: ordered[0], reason: 'sequencia' }
-  const idx = ordered.findIndex((r) => r.id === last.routineId)
-  return { routine: ordered[(idx + 1) % ordered.length], reason: 'sequencia' }
+  const routine = last ? ordered[(ordered.findIndex((r) => r.id === last.routineId) + 1) % ordered.length] : ordered[0]
+  const reason = todaySlot?.type === 'routine' && todaySlot.routineId === routine.id ? 'hoje' : 'sequencia'
+  return { routine, reason, todaySlot }
 }
 
 /** Domingo da semana corrente, meia-noite local. */

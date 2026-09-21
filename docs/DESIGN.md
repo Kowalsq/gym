@@ -92,9 +92,9 @@ BodyWeight      { id, date, kg }                       (fase 4)
 
 ## O programa
 
-Três treinos full body, A, B e C, com 2 séries por exercício. Compostos (marcados com *) em 6–8 reps com RIR 1–2; isolados em 8–10 ou 10–12 com RIR 0–1. Alguns itens aceitam alternativa ("Remada Baixa no Cabo ou Remada em Máquina", "Stiff ou Cadeira Flexora"). Plano da semana: Seg A, Ter corrida, Qua B, Qui corrida, Sex C. Tudo isso é carregado na primeira abertura por `src/db/seed.ts` e editável na tela Treinos.
+Três treinos full body, A, B e C, com 2 séries por exercício. Compostos (marcados com *) em 6–8 reps com RIR 1–2; isolados em 8–10 ou 10–12 com RIR 0–1. Alguns itens aceitam alternativa ("Remada Baixa no Cabo ou Remada em Máquina", "Leg Press ou Cadeira Extensora"). O treino B tem Agachamento, Levantamento Terra e Desenvolvimento como compostos. Plano da semana: Seg A, Ter corrida, Qua B, Qui corrida, Sex C. Tudo isso é carregado na primeira abertura por `src/db/seed.ts` e editável na tela Treinos. Quando o programa muda no código, `PROGRAM_VERSION` sobe e uma migração ajusta bancos existentes sem apagar histórico.
 
-**Próximo treino**: se o plano de hoje tem um treino e ele ainda não foi feito, é ele. Senão, o próximo na sequência depois do último registrado (A → B → C → A).
+**Próximo treino**: sempre o próximo na sequência depois do último treino registrado (A → B → C → A), porque o dia da semana varia. O plano só informa; se coincidir, o motivo aparece como "plano de hoje", e em dia de corrida o painel avisa. Exercícios pulados não mudam a sequência: aparecem como "Pulados" no detalhe da sessão e como "6 de 8 exercícios" no histórico.
 
 Índices Dexie: `SetEntry` por `[exerciseId+doneAt]` (busca "última vez" e gráfico de progresso) e por `sessionId`. `Session` por `startedAt`.
 
@@ -110,7 +110,7 @@ Regras derivadas, calculadas e não armazenadas:
 Seis seções: **Evolução · Anotar · Histórico · Treinos · Exercícios · Ajustes**. No PC, barra lateral fixa à esquerda e conteúdo largo. No celular, abas embaixo (Exercícios fica acessível por Treinos).
 
 ### 1. Evolução (tela inicial, foco no PC)
-- **Esta semana**: sete dias com o plano (A, B, C, C de corrida, traço para descanso). Feito fica preenchido, hoje destacado, planejado e não feito fica riscado.
+- **Esta semana**: sete dias com o plano (A, B, C, C de corrida, traço para descanso). Feito fica preenchido, hoje destacado, planejado e não feito fica com contorno tracejado. Dia fora do plano não é erro: a sequência A → B → C continua de onde parou.
 - Filtro de período em uma linha: 30 dias, 90 dias, 6 meses, 1 ano, tudo. Vale para tudo abaixo.
 - **Gráfico de carga máxima por sessão**, até quatro exercícios ao mesmo tempo, com tooltip que mostra reps de cada série. Cores de série em ordem fixa, validadas para daltonismo (`--chart-1..4`).
 - **Próximo treino**: qual treino é (plano de hoje ou sequência), a lista de exercícios com alvo (séries × faixa · RIR), última carga e reps, e a carga sugerida quando marcou aumentar ou diminuir (2,5 kg em barra e halter, 5 kg em máquina e cabo). Botão "Anotar treino X".

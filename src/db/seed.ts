@@ -1,5 +1,5 @@
 import { normalizeName } from '../lib/parse'
-import { db, newId, setSetting, type Equipment, type Exercise, type Routine, type RoutineItem, type WeekPlan } from './schema'
+import { db, getSetting, newId, setSetting, type Equipment, type Exercise, type Routine, type RoutineItem, type WeekPlan } from './schema'
 
 /**
  * Programa real: três treinos full body (A, B, C), 2 séries por exercício.
@@ -24,8 +24,7 @@ const EXERCISES: ExerciseSeed[] = [
   { name: 'Cadeira Flexora', muscleGroup: 'Posterior de Coxa', equipment: 'maquina', aliases: ['Flexora', 'Mesa flexora'] },
   { name: 'Cadeira Extensora', muscleGroup: 'Quadríceps', equipment: 'maquina', aliases: ['Extensora'] },
   { name: 'Agachamento Livre', muscleGroup: 'Quadríceps Composto', equipment: 'barra', isCompound: true, aliases: ['Agachamento'] },
-  { name: 'Stiff', muscleGroup: 'Posterior de Coxa', equipment: 'barra', isCompound: true },
-  { name: 'Cadeira Romana', muscleGroup: 'Lombar/Glúteo/Posterior', equipment: 'maquina', aliases: ['Romana', 'Extensão lombar'] },
+  { name: 'Levantamento Terra', muscleGroup: 'Lombar/Glúteo/Posterior', equipment: 'barra', isCompound: true, aliases: ['Deadlift', 'Terra'] },
   { name: 'Desenvolvimento Halteres', muscleGroup: 'Deltoide Composto', equipment: 'halter', isCompound: true, aliases: ['Desenvolvimento'] },
   { name: 'Remada Baixa no Cabo', muscleGroup: 'Costas/Meio', equipment: 'cabo', aliases: ['Remada baixa'] },
   { name: 'Remada em Máquina', muscleGroup: 'Costas/Meio', equipment: 'maquina', aliases: ['Remada máquina'] },
@@ -53,11 +52,10 @@ const ROUTINES: { name: string; description: string; items: ItemSeed[] }[] = [
   },
   {
     name: 'B',
-    description: 'Full body · pernas e ombro compostos',
+    description: 'Full body · agachamento, terra e ombro',
     items: [
       ['Agachamento Livre', 2, 6, 8, 1, 2],
-      ['Stiff', 2, 6, 8, 1, 2, ['Cadeira Flexora']],
-      ['Cadeira Romana', 2, 8, 10, 0, 1],
+      ['Levantamento Terra', 2, 6, 8, 1, 2],
       ['Desenvolvimento Halteres', 2, 6, 8, 1, 2],
       ['Remada Baixa no Cabo', 2, 8, 10, 0, 1, ['Remada em Máquina']],
       ['Crucifixo Invertido', 2, 10, 12, 0, 1],
@@ -80,6 +78,9 @@ const ROUTINES: { name: string; description: string; items: ItemSeed[] }[] = [
     ],
   },
 ]
+
+/** Sobe quando o programa muda; `applyProgramUpdates` migra bancos antigos. */
+const PROGRAM_VERSION = 2
 
 /**
  * Garante que os exercícios do programa existam (casando por nome ou alias com
@@ -115,7 +116,10 @@ export async function seedProgramIfMissing(): Promise<void> {
     byNorm.set(normalizeName(ex.name), ex)
   }
 
-  if (existingRoutines > 0) return
+  if (existingRoutines > 0) {
+    await applyProgramUpdates(idByName)
+    return
+  }
 
   const routines: Routine[] = ROUTINES.map((r, order) => ({
     id: newId(),
@@ -147,4 +151,34 @@ export async function seedProgramIfMissing(): Promise<void> {
     { type: 'rest' },
   ]
   await setSetting('weekPlan', plan)
+  await setSetting('programVersion', PROGRAM_VERSION)
+}
+
+/**
+ * Migrações do programa para quem já tinha as rotinas gravadas.
+ * v2: treino B troca Stiff + Cadeira Romana por Levantamento Terra.
+ */
+async function applyProgramUpdates(idByName: Map<string, string>): Promise<void> {
+  const version = (await getSetting<number>('programVersion')) ?? 1
+  if (version >= PROGRAM_VERSION) return
+
+  if (version < 2) {
+    const terraId = idByName.get('Levantamento Terra')
+    const all = await db.exercises.toArray()
+    const idOf = (name: string) => all.find((e) => normalizeName(e.name) === normalizeName(name))?.id
+    const stiffId = idOf('Stiff')
+    const romanaId = idOf('Cadeira Romana')
+    const b = (await db.routines.toArray()).find((r) => r.name === 'B')
+    if (b && terraId) {
+      const hasTerra = b.items.some((it) => it.exerciseId === terraId)
+      let items = b.items.filter((it) => it.exerciseId !== stiffId && it.exerciseId !== romanaId)
+      if (!hasTerra) {
+        const at = Math.min(1, items.length)
+        items = [...items.slice(0, at), { exerciseId: terraId, targetSets: 2, targetRepsMin: 6, targetRepsMax: 8, rirMin: 1, rirMax: 2 }, ...items.slice(at)]
+      }
+      await db.routines.update(b.id, { items, description: 'Full body · agachamento, terra e ombro' })
+    }
+  }
+
+  await setSetting('programVersion', PROGRAM_VERSION)
 }

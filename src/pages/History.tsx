@@ -9,6 +9,8 @@ const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', '
 export function History() {
   const sessions = useLiveQuery(() => finishedSessions(300), [])
   const allSets = useLiveQuery(() => db.sets.toArray(), [])
+  const routines = useLiveQuery(() => db.routines.toArray(), [])
+  const routineSize = new Map((routines ?? []).map((r) => [r.id, r.items.length]))
 
   const volumeBySession = new Map<string, number>()
   for (const s of allSets ?? []) {
@@ -59,7 +61,7 @@ export function History() {
                   <div className="num mt-0.5 text-xs font-medium text-muted">
                     {isRun
                       ? `${fmtKm(s.distanceKm ?? 0)} km · ${fmtClock((s.durationSec ?? 0) * 1000)} · ${fmtPace(s.durationSec ?? 0, s.distanceKm ?? 0)}`
-                      : `${s.endedAt ? fmtDuration(s.endedAt - s.startedAt) : ''} · ${fmtInt(volumeBySession.get(s.id) ?? 0)} kg · ${s.exerciseIds.length} exercícios`}
+                      : `${s.endedAt ? fmtDuration(s.endedAt - s.startedAt) : ''} · ${fmtInt(volumeBySession.get(s.id) ?? 0)} kg · ${s.exerciseIds.length}${s.routineId && routineSize.has(s.routineId) ? ` de ${routineSize.get(s.routineId)}` : ''} exercícios`}
                   </div>
                 </div>
               </Link>

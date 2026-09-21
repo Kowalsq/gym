@@ -156,7 +156,7 @@ export function Home() {
                         ? 'bg-chart-2 text-white'
                         : 'bg-accent text-accent-ink'
                       : missed
-                        ? 'bg-transparent text-muted line-through outline-1 outline-line'
+                        ? 'bg-transparent text-muted outline-1 outline-dashed outline-line'
                         : w.slot && w.slot.type !== 'rest'
                           ? isRun
                             ? 'bg-chart-2/15 text-chart-2'
@@ -224,7 +224,13 @@ export function Home() {
           <div className="flex items-center justify-between">
             <div className="label">Próximo treino</div>
             {suggestion && (
-              <span className="text-xs text-muted">{suggestion.reason === 'hoje' ? 'plano de hoje' : 'próximo na sequência'}</span>
+              <span className="text-xs text-muted">
+                {suggestion.reason === 'hoje'
+                  ? 'plano de hoje'
+                  : suggestion.todaySlot?.type === 'run'
+                    ? 'próximo na sequência · hoje é dia de corrida'
+                    : 'próximo na sequência'}
+              </span>
             )}
           </div>
           {!suggestion ? (

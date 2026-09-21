@@ -15,6 +15,7 @@ export function SessionDetail() {
   const sets = useLiveQuery(() => setsOfSession(id), [id])
   const logs = useLiveQuery(() => db.logs.where('sessionId').equals(id).toArray(), [id])
   const exercises = useLiveQuery(() => db.exercises.toArray(), [])
+  const routine = useLiveQuery(async () => (session?.routineId ? await db.routines.get(session.routineId) : undefined), [session?.routineId])
 
   if (!session || !sets || !exercises || !logs) return null
 
@@ -63,6 +64,13 @@ export function SessionDetail() {
   const grouped = session.exerciseIds
     .map((exId) => ({ ex: byId.get(exId), list: sets.filter((s) => s.exerciseId === exId), log: logByEx.get(exId) }))
     .filter((g) => g.ex && g.list.length > 0)
+
+  // Exercícios do treino que não foram feitos (nem o principal nem uma alternativa).
+  const doneIds = new Set(grouped.map((g) => g.ex!.id))
+  const skipped = (routine?.items ?? [])
+    .filter((it) => !doneIds.has(it.exerciseId) && !(it.alternativeIds ?? []).some((id) => doneIds.has(id)))
+    .map((it) => byId.get(it.exerciseId)?.name)
+    .filter(Boolean) as string[]
 
   const asText = grouped
     .map(({ ex, list, log }) => formatLine(ex!.name, Math.max(...list.map((s) => s.weightKg)), list.map((s) => s.reps), log?.decision ?? null))
@@ -115,6 +123,12 @@ export function SessionDetail() {
           </li>
         ))}
       </ul>
+
+      {skipped.length > 0 && (
+        <p className="text-sm text-muted">
+          <span className="font-semibold">Pulados:</span> {skipped.join(', ')}
+        </p>
+      )}
 
       <button type="button" onClick={onDelete} className="tap mt-2 self-center text-sm font-medium text-muted underline-offset-4 hover:underline">
         Apagar treino
